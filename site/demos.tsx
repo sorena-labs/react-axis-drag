@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAxisDrag, type AxisDragState } from "../src/index";
 
 const px = (n: number) => `${Math.round(n)}`.replace("-", "−");
@@ -99,6 +99,12 @@ function Row({ title, detail, rtl, onStatus }: { title: string; detail: string; 
     onCancel: () => setDragging(null),
   });
   const offset = dragging ?? (open ? -ACTIONS : 0);
+  // Closed, the actions behind the row are out of reach of the keyboard and screen readers. Set as a property:
+  // React 18 has no inert prop.
+  const actions = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (actions.current) actions.current.inert = !open;
+  }, [open]);
   const act = (done: string) => {
     setOpen(false);
     onStatus(`${done} “${title}”.`);
@@ -106,7 +112,7 @@ function Row({ title, detail, rtl, onStatus }: { title: string; detail: string; 
 
   return (
     <li className="row">
-      <div className="row-actions" inert={!open}>
+      <div ref={actions} className="row-actions">
         <button type="button" onClick={() => act("Archived")}>
           Archive
         </button>

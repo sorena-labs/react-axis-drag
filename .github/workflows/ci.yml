@@ -12,6 +12,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
+      # Every combination reports its own result, instead of one failure cancelling the rest.
+      fail-fast: false
       matrix:
         node: [22, 24]
         react: [18, 19]
