@@ -90,7 +90,7 @@ Every callback gets a state:
 |---|---|
 | `offset` | `origin + delta`, held between `min` and `max` or eased past them. |
 | `delta` | How far the pointer moved along the axis. On x, positive points toward the inline end. |
-| `velocity` | Pixels per millisecond along the axis, signed like `delta`. 0 if the pointer rested for 100 ms before it lifted. |
+| `velocity` | Pixels per millisecond along the axis, signed like `delta`, measured over about the last 80 ms so one uneven event does not decide it. 0 if the pointer rested for 100 ms before it lifted. |
 
 ### `snap(points, state, momentum?)`
 

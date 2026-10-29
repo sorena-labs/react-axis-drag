@@ -5,6 +5,7 @@ Every release, newest first. Versions follow [semantic versioning](https://semve
 ## Unreleased
 
 - `snap(points, state)`: settles a release on the nearest point, and carries a flick on to the next one by its velocity, so a row opens or a sheet picks its height in one line.
+- `velocity` is now measured over about the last 80 ms instead of between the last two events, so a single uneven event on a fast screen no longer turns a slow release into a flick, and a late flick after a slow start still counts as one.
 
 ## 0.1.0
 

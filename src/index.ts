@@ -12,7 +12,10 @@ export interface AxisDragState {
    * inline end: right in a left-to-right layout, left in a right-to-left one.
    */
   delta: number;
-  /** Pixels per millisecond along the axis, signed like `delta`. 0 when the pointer rested before it lifted. */
+  /**
+   * Pixels per millisecond along the axis, signed like `delta`, measured over about the last 80 ms. 0 when the
+   * pointer rested before it lifted.
+   */
   velocity: number;
 }
 
@@ -71,6 +74,8 @@ export function snap(points: readonly number[], { offset, velocity }: Pick<AxisD
 
 // A pointer that rests this long, in milliseconds, before it lifts ends the drag with no velocity.
 const REST = 100;
+// Velocity is measured over about this long, in milliseconds, so one uneven event cannot decide a flick.
+const WINDOW = 80;
 
 interface Drag {
   id: number;
@@ -80,6 +85,8 @@ interface Drag {
   origin: number;
   locked: boolean;
   at: number;
+  /** Recent deltas with their times; the first is the newest one at least WINDOW old. */
+  samples: { at: number; delta: number }[];
   state: AxisDragState;
 }
 
@@ -97,7 +104,10 @@ export function useAxisDrag(options: AxisDragOptions): AxisDragProps {
   function follow(d: Drag, event: PointerEvent<Element>): AxisDragState {
     const delta = axis === "x" ? (event.clientX - d.x) * d.sign : event.clientY - d.y;
     const at = performance.now();
-    const velocity = at > d.at ? (delta - d.state.delta) / (at - d.at) : d.state.velocity;
+    d.samples.push({ at, delta });
+    while (d.samples.length > 2 && at - d.samples[1]!.at >= WINDOW) d.samples.shift();
+    const first = d.samples[0]!;
+    const velocity = at > first.at ? (delta - first.delta) / (at - first.at) : d.state.velocity;
     d.at = at;
     d.state = { offset: clampOffset(d.origin + delta, min, max, rubberBand), delta, velocity };
     return d.state;
@@ -115,6 +125,7 @@ export function useAxisDrag(options: AxisDragOptions): AxisDragProps {
         origin,
         locked: false,
         at: performance.now(),
+        samples: [{ at: performance.now(), delta: 0 }],
         state: { offset: clampOffset(origin, min, max, rubberBand), delta: 0, velocity: 0 },
       };
     },
