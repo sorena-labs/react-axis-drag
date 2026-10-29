@@ -52,6 +52,18 @@ describe("useAxisDrag", () => {
     expect(onMove).toHaveBeenLastCalledWith(expect.objectContaining({ delta: 30 }));
   });
 
+  it("waits while the heading is undecided: no movement yet, or exactly diagonal", () => {
+    const onStart = vi.fn();
+    render(<Box axis="x" threshold={0} onStart={onStart} />);
+    down(0, 0);
+    // A pen or a finger can report a change of pressure without moving.
+    move(0, 0);
+    move(10, 10);
+    expect(onStart).not.toHaveBeenCalled();
+    move(20, 12);
+    expect(onStart).toHaveBeenCalledWith(expect.objectContaining({ delta: 20 }));
+  });
+
   it("lets go when the gesture runs along the other axis, so the page scrolls", () => {
     const onStart = vi.fn();
     const onMove = vi.fn();
@@ -239,6 +251,51 @@ describe("useAxisDrag", () => {
     expect(onStart).not.toHaveBeenCalled();
   });
 
+  it("keeps the drag it holds when another pointer goes down, and ends it with the first", () => {
+    const captured = new Set<number>();
+    Object.assign(Element.prototype, { setPointerCapture: (id: number) => captured.add(id), hasPointerCapture: (id: number) => captured.has(id) });
+    const onMove = vi.fn();
+    const onEnd = vi.fn();
+    const onCancel = vi.fn();
+    render(<Box axis="x" onMove={onMove} onEnd={onEnd} onCancel={onCancel} />);
+    down(0, 0);
+    move(30, 0);
+    // A second finger lands on the element mid-drag.
+    down(80, 40, { pointerId: 2 });
+    move(50, 0);
+    expect(onMove).toHaveBeenLastCalledWith(expect.objectContaining({ delta: 50 }));
+    up(50, 0);
+    expect(onEnd).toHaveBeenCalledWith(expect.objectContaining({ delta: 50 }));
+
+    // A pinch takes the first finger away: the drag still hears it was cancelled.
+    down(0, 0);
+    move(30, 0);
+    down(80, 40, { pointerId: 2 });
+    fireEvent.pointerCancel(box(), point(30, 0));
+    expect(onCancel).toHaveBeenCalledOnce();
+    Reflect.deleteProperty(Element.prototype, "hasPointerCapture");
+  });
+
+  it("keeps the browser's own drag and drop from taking a drag that starts on a link", () => {
+    const { rerender } = render(
+      <Box axis="x">
+        <a href="#next">Next</a>
+      </Box>,
+    );
+    const link = screen.getByRole("link");
+    fireEvent.pointerDown(link, point(0, 0));
+    expect(fireEvent.dragStart(link)).toBe(false);
+    fireEvent.pointerUp(link, point(0, 0));
+    // Disabled, the hook leaves the link to drag as usual.
+    rerender(
+      <Box axis="x" disabled>
+        <a href="#next">Next</a>
+      </Box>,
+    );
+    fireEvent.pointerDown(link, point(0, 0));
+    expect(fireEvent.dragStart(link)).toBe(true);
+  });
+
   it("keeps native scrolling and zoom on the other axis", () => {
     const { rerender } = render(<Box axis="x" />);
     expect(box().style.touchAction).toBe("pan-y pinch-zoom");
@@ -289,11 +346,33 @@ describe("trackpad swipes", () => {
     // A finger moving left scrolls content right: deltaX is positive, the drag's delta negative.
     expect(wheel(20, 0)).toBe(false);
     expect(onStart).toHaveBeenCalledOnce();
-    expect(onMove).toHaveBeenLastCalledWith({ delta: -24, offset: -24, velocity: -2.4 });
+    // Speed is measured from the first event on: 20 px in 10 ms. The first 4 px came before the swipe could time them.
+    expect(onMove).toHaveBeenLastCalledWith({ delta: -24, offset: -24, velocity: -2 });
     vi.advanceTimersByTime(100);
     expect(onEnd).not.toHaveBeenCalled();
     vi.advanceTimersByTime(50);
     expect(onEnd).toHaveBeenCalledWith(expect.objectContaining({ delta: -24 }));
+  });
+
+  it("gives a swipe of one event no speed, and does not time a short flick from before it began", () => {
+    const onEnd = vi.fn();
+    render(<Box axis="x" wheel onEnd={onEnd} />);
+    // The clock ticks between reads, as a real one can within one event.
+    vi.spyOn(performance, "now").mockImplementation(() => (now += 0.1));
+    wheel(40, 0);
+    vi.advanceTimersByTime(150);
+    expect(onEnd).toHaveBeenLastCalledWith(expect.objectContaining({ delta: -40, velocity: 0 }));
+
+    // Three events 16 ms apart, 20 px each: 40 px in 32 ms once the first has arrived.
+    vi.spyOn(performance, "now").mockImplementation(() => now);
+    now = 1000;
+    wheel(20, 0);
+    now = 1016;
+    wheel(20, 0);
+    now = 1032;
+    wheel(20, 0);
+    vi.advanceTimersByTime(150);
+    expect(onEnd).toHaveBeenLastCalledWith(expect.objectContaining({ delta: -60, velocity: -1.25 }));
   });
 
   it("mirrors a swipe in right to left", () => {

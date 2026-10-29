@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type DragEvent, type MouseEvent, type PointerEvent } from "react";
 
 /** The axis a drag follows. */
 export type Axis = "x" | "y";
@@ -66,6 +66,11 @@ export interface AxisDragProps {
   onPointerUp: (event: PointerEvent<Element>) => void;
   onPointerCancel: (event: PointerEvent<Element>) => void;
   onClickCapture: (event: MouseEvent<Element>) => void;
+  /**
+   * Stops the browser dragging a link, an image or selected text away while the pointer is down. In the capture
+   * phase, so it leaves `onDragStart` free, which Motion's elements use for a gesture of their own.
+   */
+  onDragStartCapture: (event: DragEvent<Element>) => void;
   style: CSSProperties;
   /** Attaches the trackpad listener when `wheel` is on. If the element has a ref of its own, call both. */
   ref: (element: Element | null) => void;
@@ -136,9 +141,14 @@ function start(options: AxisDragOptions, element: Element, target: EventTarget |
   };
 }
 
+/** The part of `dx`, `dy` along the axis, signed like `delta`. */
+function along(track: Track, dx: number, dy: number, options: AxisDragOptions): number {
+  return options.axis === "x" ? dx * track.sign : dy;
+}
+
 /** Moves a drag to `dx`, `dy` from where it began and returns its new state. */
 function follow(track: Track, dx: number, dy: number, options: AxisDragOptions): AxisDragState {
-  const delta = options.axis === "x" ? dx * track.sign : dy;
+  const delta = along(track, dx, dy, options);
   const at = performance.now();
   track.samples.push({ at, delta });
   while (track.samples.length > 2 && at - track.samples[1]!.at >= WINDOW) track.samples.shift();
@@ -151,19 +161,22 @@ function follow(track: Track, dx: number, dy: number, options: AxisDragOptions):
 
 /**
  * Whether a movement of `dx`, `dy` has gone far enough to pick an axis, and if so whether the drag may take it:
- * it must run along `axis`, and `canStart` must agree.
+ * it must run along `axis`, and `canStart` must agree. Exactly diagonal, or not moved at all, it has no axis yet.
  */
 function pick(track: Track, dx: number, dy: number, options: AxisDragOptions): "wait" | "start" | "refuse" {
-  if (Math.max(Math.abs(dx), Math.abs(dy)) < (options.threshold ?? 8)) return "wait";
-  if ((Math.abs(dx) > Math.abs(dy) ? "x" : "y") !== options.axis) return "refuse";
-  const heading = options.axis === "x" ? dx * track.sign : dy;
+  const x = Math.abs(dx);
+  const y = Math.abs(dy);
+  if (Math.max(x, y) < (options.threshold ?? 8) || x === y) return "wait";
+  if ((x > y ? "x" : "y") !== options.axis) return "refuse";
+  const heading = along(track, dx, dy, options);
   return !options.canStart || options.canStart({ delta: heading, target: track.target }) ? "start" : "refuse";
 }
 
 /**
  * A pointer drag that locks to one axis. It waits for `threshold` pixels, picks the axis the pointer moves
  * along most, and follows it only if that is `axis`; otherwise it lets go and the page scrolls. It captures
- * the pointer, mirrors x in right to left, swallows the click that ends a drag, and sets `touch-action` so
+ * the pointer, mirrors x in right to left, swallows the click that ends a drag, keeps a second finger and the
+ * browser's own drag and drop from taking it over, and sets `touch-action` so
  * touch screens keep native scrolling and pinch zoom on the other axis.
  */
 export function useAxisDrag(options: AxisDragOptions): AxisDragProps {
@@ -194,6 +207,7 @@ export function useAxisDrag(options: AxisDragOptions): AxisDragProps {
       const o = latest.current;
       // A pinch on a trackpad arrives as a wheel event with ctrlKey set: it is a zoom, not a swipe.
       if (event.ctrlKey) return;
+      const first = !swipe;
       if (!swipe) {
         if (o.disabled) return;
         swipe = { ...start(o, host, event.target), dx: 0, dy: 0, refused: false };
@@ -205,6 +219,9 @@ export function useAxisDrag(options: AxisDragOptions): AxisDragProps {
       // The wheel reports how far the content scrolls; a finger moving left scrolls it right.
       swipe.dx -= event.deltaX * scale;
       swipe.dy -= event.deltaY * scale;
+      // The first event's distance was covered before it arrived, in a time the swipe never saw: time the swipe from
+      // it on, so one event has no speed rather than an endless one.
+      if (first) swipe.samples = [{ at: swipe.at, delta: along(swipe, swipe.dx, swipe.dy, o) }];
       const starting = !swipe.locked;
       if (starting) {
         const picked = pick(swipe, swipe.dx, swipe.dy, o);
@@ -232,6 +249,9 @@ export function useAxisDrag(options: AxisDragOptions): AxisDragProps {
   return {
     onPointerDown(event) {
       if (options.disabled || (event.pointerType === "mouse" && event.button !== 0)) return;
+      // A second finger leaves the drag with the first, which still holds the element and ends it.
+      const d = drag.current;
+      if (d?.locked && event.currentTarget.hasPointerCapture?.(d.id)) return;
       drag.current = { ...start(options, event.currentTarget, event.target), id: event.pointerId, x: event.clientX, y: event.clientY };
     },
     onPointerMove(event) {
@@ -279,6 +299,10 @@ export function useAxisDrag(options: AxisDragOptions): AxisDragProps {
       swallow.current = false;
       event.preventDefault();
       event.stopPropagation();
+    },
+    onDragStartCapture(event) {
+      // Dragging a link or an image away would cancel the pointer and so the drag.
+      if (drag.current) event.preventDefault();
     },
     style: { touchAction: options.axis === "x" ? "pan-y pinch-zoom" : "pan-x pinch-zoom" },
     ref: setElement,
