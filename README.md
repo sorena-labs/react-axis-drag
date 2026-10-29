@@ -9,7 +9,9 @@ A React hook for pointer drags that lock to one axis. Swipe a row sideways, drag
 - Holds the offset between bounds, or eases past them with a rubber band.
 - Ends with the pointer's velocity, so you can tell a flick from a slow drag.
 - Swallows the click that ends a drag, so a swipe does not also open what is under it.
+- Keeps the drag when a second finger lands, or when it starts on a link or an image the browser would drag away.
 - Keeps native scrolling and pinch zoom on the other axis on touch screens.
+- Can follow a two-finger trackpad swipe as well, so a swipe row opens on a laptop too.
 - No dependencies, about 1.4 kB minified and gzipped, React 18 and 19, renders on the server.
 
 ## Install
@@ -34,6 +36,8 @@ export function SwipeRow({ children, rtl = false }: { children: ReactNode; rtl?:
 
   const drag = useAxisDrag({
     axis: "x",
+    // Without it the hook reads the element's own direction, which must then match rtl.
+    direction: rtl ? "rtl" : "ltr",
     origin: open ? -ACTIONS : 0,
     min: -ACTIONS,
     max: 0,
@@ -68,22 +72,22 @@ export function SwipeRow({ children, rtl = false }: { children: ReactNode; rtl?:
 
 ### `useAxisDrag(options)`
 
-Returns the props to spread on the element that is dragged: pointer handlers, `onClickCapture`, `onDragStartCapture`, `style` and `ref`. If you pass your own `style`, merge `drag.style` into it; if the element has a ref of its own, call both from one callback ref.
+Returns the props to spread on the element that is dragged: pointer handlers, `onClickCapture`, `onDragStartCapture`, `style` and `ref`. A prop of your own with the same name replaces the hook's, so if you pass your own `style`, merge `drag.style` into it, and if the element needs its own ref or its own handler for one of these events, call both from one function.
 
 | Option | Type | Default | |
 |---|---|---|---|
 | `axis` | `"x" \| "y"` | | The axis to follow. |
 | `threshold` | `number` | `8` | Pixels the pointer moves before the drag picks an axis. |
-| `direction` | `"ltr" \| "rtl"` | the element's computed `direction` | Mirrors x for right to left. |
-| `origin` | `number` | `0` | The offset a drag starts from, such as how far a row is already open. |
+| `direction` | `"ltr" \| "rtl"` | the element's computed `direction` | Mirrors x for right to left. Read when a drag begins. |
+| `origin` | `number` | `0` | The offset a drag starts from, such as how far a row is already open. Read when a drag begins. |
 | `min`, `max` | `number` | none | The bounds of the offset. |
 | `rubberBand` | `number` | `0` | How much of the movement past a bound the offset follows, from 0 (it stops) to 1. |
 | `disabled` | `boolean` | `false` | Ignores new drags. |
 | `canStart` | `({ delta, target }) => boolean` | every drag starts | Called once, when a drag picks this axis. `delta` gives its heading, `target` where the pointer went down. Return `false` to leave the gesture to the page. |
-| `wheel` | `boolean` | `false` | Also follows a two-finger trackpad swipe along `axis`. The drag ends once the wheel has been still for 120 ms. |
+| `wheel` | `boolean` | `false` | Also follows a two-finger trackpad swipe along `axis`. The drag ends once the wheel has been still for 120 ms. Needs the returned `ref` on the element. |
 | `onStart` | `(state) => void` | | The drag picked this axis. |
 | `onMove` | `(state) => void` | | The pointer moved, including the move that started the drag. |
-| `onEnd` | `(state) => void` | | The pointer lifted. |
+| `onEnd` | `(state) => void` | | The pointer lifted, or a trackpad swipe has been still for 120 ms. |
 | `onCancel` | `() => void` | | The browser took the pointer away. Put things back. |
 
 Every callback gets a state:
@@ -92,11 +96,13 @@ Every callback gets a state:
 |---|---|
 | `offset` | `origin + delta`, held between `min` and `max` or eased past them. |
 | `delta` | How far the pointer moved along the axis. On x, positive points toward the inline end. |
-| `velocity` | Pixels per millisecond along the axis, signed like `delta`, measured over about the last 80 ms so one uneven event does not decide it. 0 if the pointer rested for 100 ms before it lifted. |
+| `velocity` | Pixels per millisecond along the axis, signed like `delta`, measured over about the last 80 ms so one uneven event does not decide it. 0 if the pointer rested for 100 ms before it lifted. A trackpad swipe ends with the speed of its last events. |
+
+The package also exports the types `Axis`, `AxisDragOptions`, `AxisDragState` and `AxisDragProps`.
 
 ### `snap(points, state, momentum?)`
 
-Where a release settles: the point in `points` nearest to where `state.offset` would be after carrying on at `state.velocity` for `momentum` milliseconds (default 160). Pass it the state `onEnd` gets. A slow drag lands on the nearest point; a flick reaches the next one.
+Where a release settles: the point in `points` nearest to where `state.offset` would be after carrying on at `state.velocity` for `momentum` milliseconds (default 160). Pass it the state `onEnd` gets. A slow drag lands on the nearest point; a flick reaches the next one. With no points, it returns `state.offset`.
 
 ```ts
 onEnd: (state) => setHeight(snap([0, 150, 268], state)),
@@ -124,15 +130,18 @@ The hook never moves anything itself. It reports a number along one axis, and th
   canStart: ({ delta, target }) => !list.contains(target as Node) || (list.scrollTop <= 0 && delta > 0),
   ```
 
+  Safari, on iPhone and iPad as on the Mac, does not support `pan-up` or `pan-down`. It drops `pan-x pan-down` and keeps vertical panning, so there a pull down at the top of the list goes to the browser, not to the drag.
+
 - **`touch-action`.** The hook sets `pan-y pinch-zoom` for x and `pan-x pinch-zoom` for y. To change it, for example `pan-x pan-down` for a pull to refresh at the top of a list, set it after spreading `drag.style`.
 - **Pointer capture.** Once a drag picks its axis, the element captures the pointer, so the drag carries on when the pointer leaves it.
+- **Other buttons and fingers.** Only the primary mouse button starts a drag. A second finger that lands during a drag is ignored; the first finger keeps the drag and ends it.
 - **Text selection.** A mouse drag across text selects it, as it would anywhere on the page. Unless people need to select the element's text, set `user-select: none` on it, with `-webkit-user-select: none` beside it for Safari, as the demos do.
-- **Trackpads.** A two-finger swipe sends wheel events, not pointer events, so without `wheel` a swipe row on a laptop only opens by clicking and dragging. With `wheel` on, a swipe along `axis` becomes the same drag, with the same callbacks; the hook stops the page from scrolling or swiping back through history while it holds the gesture. A swipe along the other axis, a mouse wheel and a pinch zoom stay with the page. On y, `wheel` takes vertical scrolling over the element, so use it there only when the element should not scroll the page.
+- **Trackpads.** A two-finger swipe sends wheel events, not pointer events, so without `wheel` a swipe row on a laptop only opens by clicking and dragging. With `wheel` on, a swipe along `axis` becomes the same drag, with the same callbacks; the hook stops the page from scrolling or swiping back through history while it holds the gesture. A pinch zoom always stays with the page. On x, so do a vertical swipe and a mouse wheel. On y, `wheel` takes vertical scrolling over the element, mouse wheel included, so use it there only when the element should not scroll the page.
 - **Browsers.** Any browser with Pointer Events, which is every current one.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Report security problems as described in [SECURITY.md](SECURITY.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md). What changed in each release is in [CHANGELOG.md](CHANGELOG.md). Report security problems as described in [SECURITY.md](SECURITY.md).
 
 ## License
 
