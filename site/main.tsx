@@ -171,7 +171,7 @@ const drag = useAxisDrag({
   onStart: () => (base = x.get()),
   onMove: ({ delta }) => x.set(clampOffset(base + delta, -150, 150, 0.3)),
   onEnd: ({ velocity }) => {
-    const to = nearest(x.get() + velocity * 160);
+    const to = snap([-100, 0, 100], { offset: x.get(), velocity });
     // Motion wants pixels per second; the hook gives pixels per millisecond.
     animate(x, to, { type: "spring", velocity: velocity * 1000, bounce: 0.15 });
   },

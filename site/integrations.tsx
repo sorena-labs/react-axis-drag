@@ -1,14 +1,13 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { animate, motion, MotionConfig, useMotionValue, type AnimationPlaybackControls } from "motion/react";
 import { useRef, useState, type CSSProperties } from "react";
-import { clampOffset, useAxisDrag } from "../src/index";
+import { clampOffset, snap, useAxisDrag } from "../src/index";
 
 const STOPS = [
   { name: "Left", at: -100 },
   { name: "Centre", at: 0 },
   { name: "Right", at: 100 },
 ];
-const nearest = (aim: number) => STOPS.reduce((best, stop) => (Math.abs(stop.at - aim) < Math.abs(best.at - aim) ? stop : best));
 
 /** Motion: the hook reads the pointer, and a spring takes the release at the pointer's own speed. */
 export function Spring() {
@@ -32,7 +31,10 @@ export function Spring() {
       base.current = x.get();
     },
     onMove: ({ delta }) => x.set(clampOffset(base.current + delta, -150, 150, 0.3)),
-    onEnd: ({ velocity }) => settle(nearest(x.get() + velocity * 160), velocity),
+    onEnd: ({ velocity }) => {
+      const at = snap(STOPS.map((s) => s.at), { offset: x.get(), velocity });
+      settle(STOPS.find((s) => s.at === at)!, velocity);
+    },
   });
 
   return (
@@ -79,7 +81,7 @@ function VirtualRow({ index, open, onOpenChange, onArchive, style }: {
     onMove: (s) => setDragging(s.offset),
     onEnd: (s) => {
       setDragging(null);
-      onOpenChange(s.offset + s.velocity * 160 < -ACTION / 2);
+      onOpenChange(snap([-ACTION, 0], s) === -ACTION);
     },
     onCancel: () => setDragging(null),
   });
