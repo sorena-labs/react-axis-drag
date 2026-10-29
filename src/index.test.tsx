@@ -317,6 +317,17 @@ describe("trackpad swipes", () => {
     expect(onStart).toHaveBeenCalledOnce();
   });
 
+  it("asks canStart before a swipe starts, as it does for a pointer", () => {
+    const onStart = vi.fn();
+    render(<Box axis="x" wheel canStart={({ delta }) => delta > 0} onStart={onStart} />);
+    // Heading toward the inline start: refused, so the page keeps the gesture.
+    expect(wheel(20, 0)).toBe(true);
+    expect(onStart).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(150);
+    expect(wheel(-20, 0)).toBe(false);
+    expect(onStart).toHaveBeenCalledOnce();
+  });
+
   it("ignores the wheel unless asked, and while disabled", () => {
     const onStart = vi.fn();
     const { rerender } = render(<Box axis="x" onStart={onStart} />);
