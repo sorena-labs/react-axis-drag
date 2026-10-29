@@ -9,6 +9,7 @@ Every release, newest first. Versions follow [semantic versioning](https://semve
 - A trackpad swipe of one wheel event now has a `velocity` of 0, where it could be 0 or thousands of px/ms depending on the clock. Short swipes are timed from their first event, so they no longer read up to half again too fast.
 - With `threshold: 0`, a pointer that reports pressure without moving, or that moves exactly diagonally, no longer settles the axis; the drag waits for a move that leans one way.
 - The README says to set `user-select: none` on a dragged element, since a mouse drag across text selects it.
+- The README warns that Safari ignores `pan-down`, so a pull to refresh does not reach the drag there, and its swipe row passes `direction` so the drag and the transform agree in right to left.
 
 ## 0.2.0
 
