@@ -4,6 +4,8 @@ Every release, newest first. Versions follow [semantic versioning](https://semve
 
 ## Unreleased
 
+## 0.2.1
+
 - A second finger that lands on the element mid-drag no longer takes it over. The first finger keeps the drag, and its release or cancel still calls `onEnd` or `onCancel`; before, the drag froze and neither was called.
 - A drag that starts on a link or an image is no longer cancelled by the browser's own drag and drop. The hook returns `onDragStartCapture` for this, which a spread already includes.
 - A trackpad swipe of one wheel event now has a `velocity` of 0, where it could be 0 or thousands of px/ms depending on the clock. Short swipes are timed from their first event, so they no longer read up to half again too fast.
