@@ -51,6 +51,7 @@ const OPTIONS = [
   ["min, max", "none", "The bounds of the offset."],
   ["rubberBand", "0", "How much of the movement past a bound the offset follows, from 0 to 1."],
   ["disabled", "false", "Ignores new drags."],
+  ["canStart", "", "Called once a drag picks its axis, with its heading and target. Return false to leave the gesture to the page."],
   ["onStart, onMove, onEnd", "", "Called with offset, delta and velocity in px/ms."],
   ["onCancel", "", "The browser took the pointer away. Put things back."],
 ];
@@ -109,6 +110,9 @@ function Page() {
   min: 0,
   max: 268,
   rubberBand: 0.2,
+  // At full height the route scrolls; it hands the drag to the sheet at its top.
+  canStart: ({ delta, target }) =>
+    !full || !route.contains(target) || (route.scrollTop <= 0 && delta > 0),
   onMove: ({ offset }) => setDragging(offset),
   onEnd: (state) => {
     setDragging(null);
@@ -119,6 +123,10 @@ function Page() {
           <p>
             On the y axis the sheet starts from the height it is at, stops at the top and bottom with a little give, and uses the speed of the release to
             carry on to the next height. The buttons below do the same with a keyboard or a screen reader.
+          </p>
+          <p>
+            Open it to full height and the route scrolls. Pull the route down once it is at its top and the sheet follows: <code>canStart</code> sees which
+            way the drag is heading and where it began, and leaves every other gesture to the list.
           </p>
         </Feature>
 
@@ -131,15 +139,17 @@ function Page() {
   min: 0,
   max: 64,
   rubberBand: 0.4,
-  disabled: !atTop || busy,
+  disabled: busy,
+  canStart: ({ delta }) => delta > 0 && list.scrollTop <= 0,
   onEnd: ({ offset }) => offset >= 64 && refresh(),
 });
 
 <div {...drag} style={{ ...drag.style, touchAction: atTop ? "pan-x pan-down" : "pan-y" }} />`}
         >
           <p>
-            The pull only starts at the top of the list. There the list sets its own <code>touch-action</code> after the hook's, so a downward pull goes to
-            the drag and an upward swipe still scrolls. Past 64 px the pull gets heavier instead of stopping.
+            The pull only starts downward at the top of the list: <code>canStart</code> checks both. On touch screens the list also sets its own{" "}
+            <code>touch-action</code> after the hook's, so at the top an upward swipe still scrolls natively. Past 64 px the pull gets heavier instead of
+            stopping.
           </p>
         </Feature>
 

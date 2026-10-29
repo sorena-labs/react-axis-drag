@@ -554,6 +554,33 @@ ul.prose li {
   background: var(--line-strong);
 }
 
+.sheet {
+  display: flex;
+  flex-direction: column;
+}
+
+.sheet-route {
+  flex: 1;
+  min-height: 0;
+  margin-top: 6px;
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+.sheet-route[data-full] {
+  overflow-y: auto;
+}
+
+.sheet-route ol {
+  margin: 0;
+  padding-inline-start: 22px;
+}
+
+.sheet-route li {
+  padding-block: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
 .sheet h3 {
   margin: 0 0 2px;
   font-size: 1.3125rem;

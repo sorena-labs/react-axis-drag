@@ -79,6 +79,7 @@ Returns the props to spread on the element that is dragged: pointer handlers, `o
 | `min`, `max` | `number` | none | The bounds of the offset. |
 | `rubberBand` | `number` | `0` | How much of the movement past a bound the offset follows, from 0 (it stops) to 1. |
 | `disabled` | `boolean` | `false` | Ignores new drags. |
+| `canStart` | `({ delta, target }) => boolean` | every drag starts | Called once, when a drag picks this axis. `delta` gives its heading, `target` where the pointer went down. Return `false` to leave the gesture to the page. |
 | `onStart` | `(state) => void` | | The drag picked this axis. |
 | `onMove` | `(state) => void` | | The pointer moved, including the move that started the drag. |
 | `onEnd` | `(state) => void` | | The pointer lifted. |
@@ -107,6 +108,12 @@ The clamp the hook uses, for settling animations that should stop at the same bo
 ## Good to know
 
 - **Keyboard and screen readers.** A drag only works with a pointer. Give everything a drag can reach a real button too, such as a "More" button that opens the same row actions. WCAG 2.2 asks for this in 2.5.7, Dragging Movements.
+- **Scrolling content.** A sheet whose content scrolls, or a pull to refresh, should only take over at the top of the list and only when pulled down. Check both in `canStart`, and on touch screens set the list's `touch-action` to `pan-x pan-down` at its top and `pan-y` below it, so the browser keeps the other gestures:
+
+  ```ts
+  canStart: ({ delta, target }) => !list.contains(target as Node) || (list.scrollTop <= 0 && delta > 0),
+  ```
+
 - **`touch-action`.** The hook sets `pan-y pinch-zoom` for x and `pan-x pinch-zoom` for y. To change it, for example `pan-x pan-down` for a pull to refresh at the top of a list, set it after spreading `drag.style`.
 - **Pointer capture.** Once a drag picks its axis, the element captures the pointer, so the drag carries on when the pointer leaves it.
 - **Browsers.** Any browser with Pointer Events, which is every current one.

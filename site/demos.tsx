@@ -165,17 +165,47 @@ const DETENTS = [
   { name: "Peek", at: 268 },
 ];
 
-/** A sheet with three heights. A flick carries it on to the next one. */
+const WAYPOINTS = [
+  "Harbour car park",
+  "Lifeboat station",
+  "Cliff path, north end",
+  "Seal point",
+  "Lighthouse",
+  "Old quarry",
+  "Pine wood",
+  "Stream crossing",
+  "Picnic meadow",
+  "Back at the harbour",
+];
+
+/** A sheet with three heights. At full height its route scrolls, and hands the drag back at the top. */
 export function Sheet() {
   const [detent, setDetent] = useState(2);
   const [dragging, setDragging] = useState<number | null>(null);
+  const [scrolled, setScrolled] = useState(false);
+  const route = useRef<HTMLDivElement>(null);
   const at = DETENTS[detent]!.at;
+  const full = detent === 0;
+
+  // Below full height the route does not scroll, so it starts at its top again.
+  useEffect(() => {
+    if (full || !route.current) return;
+    route.current.scrollTop = 0;
+    setScrolled(false);
+  }, [full]);
+
   const drag = useAxisDrag({
     axis: "y",
     origin: at,
     min: 0,
     max: 268,
     rubberBand: 0.2,
+    // At full height a drag on the route scrolls it; only a downward pull at its top moves the sheet.
+    canStart: ({ delta, target }) => {
+      const list = route.current;
+      if (!full || !list || !(target instanceof Node) || !list.contains(target)) return true;
+      return list.scrollTop <= 0 && delta > 0;
+    },
     onMove: (s) => setDragging(s.offset),
     onEnd: (s) => {
       setDragging(null);
@@ -201,8 +231,20 @@ export function Sheet() {
           <span className="sheet-handle" aria-hidden="true" />
           <h3>Coastal loop</h3>
           <p className="muted">8.4 km, about 2 hours 10 minutes</p>
-          <p>Starts at the harbour car park, follows the cliff path north and comes back through the pine wood.</p>
-          <p className="muted">Steepest climb: 140 m over the first 2 km.</p>
+          <div
+            ref={route}
+            className="sheet-route"
+            data-full={full || undefined}
+            onScroll={(e) => setScrolled(e.currentTarget.scrollTop > 0)}
+            // Scrolled, the route scrolls both ways; at its top a downward pull goes to the sheet.
+            style={full ? { touchAction: scrolled ? "pan-y" : "pan-x pan-down" } : undefined}
+          >
+            <ol>
+              {WAYPOINTS.map((point) => (
+                <li key={point}>{point}</li>
+              ))}
+            </ol>
+          </div>
         </section>
       </div>
       <div className="segmented" role="group" aria-label="Sheet height">
@@ -225,6 +267,7 @@ export function Pull() {
   const [pull, setPull] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const next = useRef(413);
+  const list = useRef<HTMLDivElement>(null);
 
   function refresh() {
     setBusy(true);
@@ -239,7 +282,9 @@ export function Pull() {
     min: 0,
     max: PULL,
     rubberBand: 0.4,
-    disabled: !atTop || busy,
+    disabled: busy,
+    // Only a downward pull at the top refreshes; anything else scrolls the list.
+    canStart: ({ delta }) => delta > 0 && (list.current?.scrollTop ?? 0) <= 0,
     onMove: (s) => setPull(s.offset),
     onEnd: (s) => {
       setPull(null);
@@ -256,6 +301,7 @@ export function Pull() {
           <span className="spinner" data-busy={busy || undefined} style={{ rotate: `${y * 4}deg` }} />
         </div>
         <div
+          ref={list}
           className="pull-scroll"
           onScroll={(e) => setAtTop(e.currentTarget.scrollTop <= 0)}
           {...drag}

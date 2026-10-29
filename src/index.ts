@@ -36,6 +36,13 @@ export interface AxisDragOptions {
   rubberBand?: number;
   /** Ignores new drags while true. */
   disabled?: boolean;
+  /**
+   * Called once, when a drag picks this axis, to decide whether it may start. `delta` says which way it is heading
+   * (its sign, as in the state) and `target` is where the pointer went down. Return false to leave the gesture to the
+   * page: a pull to refresh that only starts downward at the top of a list, or a sheet whose content scrolls until
+   * it reaches its top. Default: every drag starts.
+   */
+  canStart?: (start: { delta: number; target: EventTarget | null }) => boolean;
   /** The drag has picked this axis. */
   onStart?: (state: AxisDragState) => void;
   /** The pointer moved. Also called with the move that started the drag. */
@@ -83,6 +90,7 @@ interface Drag {
   y: number;
   sign: number;
   origin: number;
+  target: EventTarget | null;
   locked: boolean;
   at: number;
   /** Recent deltas with their times; the first is the newest one at least WINDOW old. */
@@ -123,6 +131,7 @@ export function useAxisDrag(options: AxisDragOptions): AxisDragProps {
         y: event.clientY,
         sign: direction === "rtl" ? -1 : 1,
         origin,
+        target: event.target,
         locked: false,
         at: performance.now(),
         samples: [{ at: performance.now(), delta: 0 }],
@@ -137,7 +146,8 @@ export function useAxisDrag(options: AxisDragOptions): AxisDragProps {
         const dx = Math.abs(event.clientX - d.x);
         const dy = Math.abs(event.clientY - d.y);
         if (Math.max(dx, dy) < threshold) return;
-        if ((dx > dy ? "x" : "y") !== axis) {
+        const heading = axis === "x" ? (event.clientX - d.x) * d.sign : event.clientY - d.y;
+        if ((dx > dy ? "x" : "y") !== axis || (options.canStart && !options.canStart({ delta: heading, target: d.target }))) {
           drag.current = null;
           return;
         }
