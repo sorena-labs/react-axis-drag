@@ -52,6 +52,7 @@ const OPTIONS = [
   ["rubberBand", "0", "How much of the movement past a bound the offset follows, from 0 to 1."],
   ["disabled", "false", "Ignores new drags."],
   ["canStart", "", "Called once a drag picks its axis, with its heading and target. Return false to leave the gesture to the page."],
+  ["wheel", "false", "Also follows a two-finger trackpad swipe along the axis, as the same drag."],
   ["onStart, onMove, onEnd", "", "Called with offset, delta and velocity in px/ms."],
   ["onCancel", "", "The browser took the pointer away. Put things back."],
 ];
@@ -68,7 +69,7 @@ function Page() {
           </p>
           <CopyInstall />
           <p className="facts">
-            No dependencies. About 0.8 kB minified and gzipped. React 18 and 19. Renders on the server.{" "}
+            No dependencies. About 1.2 kB minified and gzipped. React 18 and 19. Renders on the server.{" "}
             <a href="https://github.com/sorena-labs/react-axis-drag">Source on GitHub</a>, <a href="https://www.npmjs.com/package/react-axis-drag">package on npm</a>.
           </p>
         </div>
@@ -97,6 +98,10 @@ function Page() {
           <p>
             Clicking a row opens it, but the click that ends a swipe is swallowed, so a swipe never opens the row by accident. Turn on right to left and
             the same code mirrors: the row slides the other way, because positive offsets always point toward the inline end.
+          </p>
+          <p>
+            On a laptop, swipe a row with two fingers on the trackpad. With <code>wheel</code> on, the swipe is the same drag, and the page neither scrolls
+            nor goes back through history while the row holds it. The tape at the top takes trackpad swipes too.
           </p>
         </Feature>
 
