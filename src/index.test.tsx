@@ -128,6 +128,40 @@ describe("useAxisDrag", () => {
     expect(onEnd).toHaveBeenLastCalledWith(expect.objectContaining({ delta: 30, velocity: 0 }));
   });
 
+  it("measures velocity over the last 80 ms, so one uneven event does not make a flick", () => {
+    const onEnd = vi.fn();
+    render(<Box axis="x" onEnd={onEnd} />);
+    down(0, 0);
+    now = 10;
+    move(20, 0);
+    now = 20;
+    move(30, 0);
+    // A late, jumpy event: 30 px in 10 ms on its own.
+    now = 30;
+    move(60, 0);
+    now = 35;
+    up(60, 0);
+    expect(onEnd).toHaveBeenLastCalledWith(expect.objectContaining({ velocity: 2 }));
+  });
+
+  it("forgets movement older than 80 ms, so a slow start does not damp a late flick", () => {
+    const onEnd = vi.fn();
+    render(<Box axis="x" onEnd={onEnd} />);
+    down(0, 0);
+    now = 10;
+    move(10, 0);
+    now = 100;
+    move(20, 0);
+    now = 150;
+    move(30, 0);
+    now = 200;
+    move(130, 0);
+    now = 210;
+    up(130, 0);
+    // Measured from the sample at 100 ms, the newest one at least 80 ms old: 110 px in 100 ms.
+    expect(onEnd).toHaveBeenLastCalledWith(expect.objectContaining({ velocity: 1.1 }));
+  });
+
   it("swallows the click that ends a drag, and only that one", () => {
     const onClick = vi.fn();
     render(
