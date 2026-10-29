@@ -269,7 +269,7 @@ export function Pull() {
   const [pull, setPull] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const next = useRef(413);
-  const list = useRef<HTMLDivElement>(null);
+  const list = useRef<HTMLDivElement | null>(null);
 
   function refresh() {
     setBusy(true);
@@ -303,10 +303,14 @@ export function Pull() {
           <span className="spinner" data-busy={busy || undefined} style={{ rotate: `${y * 4}deg` }} />
         </div>
         <div
-          ref={list}
           className="pull-scroll"
           onScroll={(e) => setAtTop(e.currentTarget.scrollTop <= 0)}
           {...drag}
+          // The list's own ref and the hook's, from one callback: the hook's alone would replace it.
+          ref={(element) => {
+            list.current = element;
+            drag.ref(element);
+          }}
           // At the top a downward pull is ours and an upward one still scrolls; further down, the list only scrolls.
           style={{ ...drag.style, touchAction: atTop ? "pan-x pan-down" : "pan-y" }}
         >
