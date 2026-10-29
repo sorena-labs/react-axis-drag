@@ -192,6 +192,39 @@ describe("useAxisDrag", () => {
     expect(onEnd).not.toHaveBeenCalled();
   });
 
+  it("asks canStart, with the heading and the target, before it starts", () => {
+    const onStart = vi.fn();
+    const canStart = vi.fn(({ delta }: { delta: number }) => delta > 0);
+    render(
+      <Box axis="y" canStart={canStart} onStart={onStart}>
+        <span>Content</span>
+      </Box>,
+    );
+    const content = screen.getByText("Content");
+    fireEvent.pointerDown(content, point(0, 100));
+    fireEvent.pointerMove(content, point(0, 70));
+    expect(canStart).toHaveBeenLastCalledWith({ delta: -30, target: content });
+    expect(onStart).not.toHaveBeenCalled();
+    // Refused, the gesture stays with the page until the pointer goes down again.
+    fireEvent.pointerMove(content, point(0, 160));
+    expect(canStart).toHaveBeenCalledOnce();
+    expect(onStart).not.toHaveBeenCalled();
+
+    fireEvent.pointerUp(content, point(0, 160));
+    fireEvent.pointerDown(content, point(0, 100));
+    fireEvent.pointerMove(content, point(0, 130));
+    expect(canStart).toHaveBeenLastCalledWith({ delta: 30, target: content });
+    expect(onStart).toHaveBeenCalledOnce();
+  });
+
+  it("gives canStart the heading mirrored in right to left", () => {
+    const canStart = vi.fn(() => true);
+    render(<Box axis="x" direction="rtl" canStart={canStart} />);
+    down(100, 0);
+    move(80, 0);
+    expect(canStart).toHaveBeenCalledWith(expect.objectContaining({ delta: 20 }));
+  });
+
   it("ignores other mouse buttons, other pointers and a disabled drag", () => {
     const onStart = vi.fn();
     const { rerender } = render(<Box axis="x" onStart={onStart} />);
