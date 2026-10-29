@@ -106,6 +106,15 @@ onEnd: (state) => setHeight(snap([0, 150, 268], state)),
 
 The clamp the hook uses, for settling animations that should stop at the same bounds.
 
+## More ideas
+
+The hook never moves anything itself. It reports a number along one axis, and that number can drive anything. The site shows it [scrubbing a number, turning a knob, spinning a box and sliding to confirm](https://sorena-labs.github.io/react-axis-drag/#ideas). A few more it fits:
+
+- **Swipe a photo down to close it.** Use `axis: "y"` and `canStart: ({ delta }) => delta > 0`, fade the photo as `offset` grows, and close it when `snap([0, 400], state)` is 400. Pinch zoom stays with the browser.
+- **Swipe a chat sideways to show timestamps.** Spread the drag on the scrolling list itself and move every bubble by `offset`, so they all slide together and spring back on release. The list still scrolls.
+- **Collapse a split pane with a flick.** On the divider, `snap([0, 240, 480], state)` closes the sidebar on a flick and stops at the nearest width on a slow drag.
+- **Scrub a video in a scrolling feed.** Set `currentTime` from `delta` while the feed keeps scrolling on the other axis.
+
 ## Good to know
 
 - **Keyboard and screen readers.** A drag only works with a pointer. Give everything a drag can reach a real button too, such as a "More" button that opens the same row actions. WCAG 2.2 asks for this in 2.5.7, Dragging Movements.

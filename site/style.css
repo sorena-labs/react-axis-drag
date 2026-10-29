@@ -12,6 +12,12 @@
   --logo: #32127a;
   --shadow: 0 1px 2px rgb(27 29 33 / 0.08), 0 10px 28px rgb(27 29 33 / 0.1);
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Code colours, each at least 4.5:1 on --surface. */
+  --tok-keyword: #9a2b72;
+  --tok-string: #1d7a3a;
+  --tok-number: #a65200;
+  --tok-call: #1f5fbf;
+  --tok-key: #4a4fbf;
   color-scheme: light;
 }
 
@@ -25,6 +31,11 @@
     --line-strong: #6b727d;
     --logo: #8a6cf2;
     --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 10px 28px rgb(0 0 0 / 0.35);
+    --tok-keyword: #f28fc6;
+    --tok-string: #8fd9a0;
+    --tok-number: #f5b26b;
+    --tok-call: #82b8ff;
+    --tok-key: #b4b6ff;
     color-scheme: dark;
   }
 }
@@ -81,6 +92,32 @@ pre {
 
 pre code {
   font-size: inherit;
+}
+
+.tok-comment {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.tok-keyword {
+  color: var(--tok-keyword);
+}
+
+.tok-string {
+  color: var(--tok-string);
+}
+
+.tok-number {
+  color: var(--tok-number);
+}
+
+.tok-tag,
+.tok-call {
+  color: var(--tok-call);
+}
+
+.tok-key {
+  color: var(--tok-key);
 }
 
 .page {
@@ -754,6 +791,262 @@ ul.prose li {
 }
 
 .vrow-face[data-dragging] {
+  transition: none;
+}
+
+/* Not only for moving things: four small demos in a grid */
+.ideas {
+  display: grid;
+  gap: 40px 32px;
+  margin-top: 32px;
+}
+
+@media (min-width: 760px) {
+  .ideas {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Each card spans three rows of the grid and shares them, so heads, demos and notes line up across a row. */
+.idea {
+  display: grid;
+  grid-row: span 3;
+  grid-template-rows: subgrid;
+  row-gap: 12px;
+}
+
+.idea-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+
+.idea h3 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-stretch: 112%;
+  line-height: 1.3;
+}
+
+.idea-head .segmented button {
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: 0.875rem;
+}
+
+/* The demo and its code share one cell. The demo sets the size; the code fills it and scrolls, so the card never grows. */
+.idea-body {
+  display: grid;
+}
+
+.idea-body > * {
+  grid-area: 1 / 1;
+  min-width: 0;
+}
+
+.idea-body > [data-off] {
+  visibility: hidden;
+}
+
+.idea-code {
+  contain: size;
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.idea-note {
+  max-width: 52ch;
+  margin: 0;
+  font-size: 0.9375rem;
+}
+
+.idea-stage {
+  height: 288px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 16px;
+}
+
+.scrub-box {
+  height: 64px;
+  background: var(--tape);
+  box-shadow: var(--shadow);
+}
+
+.scrub-fields {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 20px;
+}
+
+.scrub {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9375rem;
+}
+
+.scrub-name {
+  padding-block: 8px;
+  font-weight: 600;
+  text-decoration: underline dotted var(--line-strong);
+  text-underline-offset: 4px;
+  cursor: ew-resize;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.scrub input {
+  width: 4.5em;
+  min-height: 36px;
+  padding: 0 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--paper);
+  color: inherit;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The ring fills clockwise from the bottom left, over the knob's 270 degrees. */
+.knob-ring {
+  width: 128px;
+  height: 128px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(from -135deg, var(--tape) 0 var(--turn), var(--line) var(--turn) 270deg, transparent 270deg);
+}
+
+.knob {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  cursor: ns-resize;
+}
+
+.knob::after {
+  content: "";
+  position: absolute;
+  top: 10px;
+  left: calc(50% - 2px);
+  width: 4px;
+  height: 22px;
+  border-radius: 2px;
+  background: var(--ink);
+}
+
+.knob-value {
+  margin: 0;
+  font-weight: 600;
+}
+
+.spin-stage {
+  perspective: 600px;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.cube {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  transform-style: preserve-3d;
+  transition: transform 700ms var(--ease);
+}
+
+.cube[data-dragging] {
+  transition: none;
+}
+
+.cube span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgb(0 0 0 / 0.2);
+  background: var(--tape);
+  color: var(--tape-ink);
+  font-weight: 700;
+  font-stretch: 112%;
+}
+
+/* Alternate sides a shade darker, so the turn reads as depth. */
+.cube span:nth-child(even) {
+  background: color-mix(in srgb, var(--tape) 82%, black);
+}
+
+.cube span:nth-child(1) {
+  transform: translateZ(48px);
+}
+
+.cube span:nth-child(2) {
+  transform: rotateY(90deg) translateZ(48px);
+}
+
+.cube span:nth-child(3) {
+  transform: rotateY(180deg) translateZ(48px);
+}
+
+.cube span:nth-child(4) {
+  transform: rotateY(270deg) translateZ(48px);
+}
+
+.slide {
+  position: relative;
+  width: min(100% - 32px, 360px);
+  height: 56px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.slide-label {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding-inline-start: 48px;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  transition: opacity 260ms var(--ease);
+}
+
+.slide-thumb {
+  position: absolute;
+  top: calc(50% - 24px);
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--danger);
+  color: #ffffff;
+  font-size: 1.25rem;
+  cursor: grab;
+  transition: left 260ms var(--ease);
+}
+
+.slide[data-dragging] .slide-thumb {
+  cursor: grabbing;
+}
+
+.slide[data-dragging] > * {
   transition: none;
 }
 
