@@ -1,4 +1,4 @@
-# react-axis-drag
+# ![react-axis-drag](https://raw.githubusercontent.com/sorena-labs/react-axis-drag/main/.github/banner.png)
 
 A React hook for pointer drags that lock to one axis. Swipe a row sideways, drag a sheet down, pull a list to refresh: the drag follows one axis and leaves the other to the browser, so the page still scrolls.
 
