@@ -272,6 +272,61 @@ describe("snap", () => {
   });
 });
 
+describe("trackpad swipes", () => {
+  beforeEach(() => vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] }));
+  afterEach(() => vi.useRealTimers());
+  const wheel = (deltaX: number, deltaY: number, more: object = {}) => fireEvent.wheel(box(), { deltaX, deltaY, ...more });
+
+  it("follows a two-finger swipe, and ends it once the wheel is still", () => {
+    const onStart = vi.fn();
+    const onMove = vi.fn();
+    const onEnd = vi.fn();
+    render(<Box axis="x" wheel onStart={onStart} onMove={onMove} onEnd={onEnd} />);
+    // Under the threshold the page keeps the event.
+    expect(wheel(4, 1)).toBe(true);
+    expect(onStart).not.toHaveBeenCalled();
+    now = 10;
+    // A finger moving left scrolls content right: deltaX is positive, the drag's delta negative.
+    expect(wheel(20, 0)).toBe(false);
+    expect(onStart).toHaveBeenCalledOnce();
+    expect(onMove).toHaveBeenLastCalledWith({ delta: -24, offset: -24, velocity: -2.4 });
+    vi.advanceTimersByTime(100);
+    expect(onEnd).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(50);
+    expect(onEnd).toHaveBeenCalledWith(expect.objectContaining({ delta: -24 }));
+  });
+
+  it("mirrors a swipe in right to left", () => {
+    const onMove = vi.fn();
+    render(<Box axis="x" wheel direction="rtl" onMove={onMove} />);
+    wheel(20, 0);
+    expect(onMove).toHaveBeenLastCalledWith(expect.objectContaining({ delta: 20 }));
+  });
+
+  it("leaves page scrolling and pinch zoom alone", () => {
+    const onStart = vi.fn();
+    render(<Box axis="x" wheel onStart={onStart} />);
+    expect(wheel(0, 40)).toBe(true);
+    // The rest of a vertical gesture stays vertical, even if it drifts sideways.
+    expect(wheel(60, 0)).toBe(true);
+    expect(onStart).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(150);
+    expect(wheel(40, 0, { ctrlKey: true })).toBe(true);
+    expect(onStart).not.toHaveBeenCalled();
+    expect(wheel(40, 0)).toBe(false);
+    expect(onStart).toHaveBeenCalledOnce();
+  });
+
+  it("ignores the wheel unless asked, and while disabled", () => {
+    const onStart = vi.fn();
+    const { rerender } = render(<Box axis="x" onStart={onStart} />);
+    expect(wheel(40, 0)).toBe(true);
+    rerender(<Box axis="x" wheel disabled onStart={onStart} />);
+    expect(wheel(40, 0)).toBe(true);
+    expect(onStart).not.toHaveBeenCalled();
+  });
+});
+
 describe("clampOffset", () => {
   it("holds a value between the bounds, or eases past them", () => {
     expect(clampOffset(5, 0, 10)).toBe(5);

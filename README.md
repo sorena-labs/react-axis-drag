@@ -10,7 +10,7 @@ A React hook for pointer drags that lock to one axis. Swipe a row sideways, drag
 - Ends with the pointer's velocity, so you can tell a flick from a slow drag.
 - Swallows the click that ends a drag, so a swipe does not also open what is under it.
 - Keeps native scrolling and pinch zoom on the other axis on touch screens.
-- No dependencies, about 0.8 kB minified and gzipped, React 18 and 19, renders on the server.
+- No dependencies, about 1.2 kB minified and gzipped, React 18 and 19, renders on the server.
 
 ## Install
 
@@ -68,7 +68,7 @@ export function SwipeRow({ children, rtl = false }: { children: ReactNode; rtl?:
 
 ### `useAxisDrag(options)`
 
-Returns the props to spread on the element that is dragged: pointer handlers, `onClickCapture` and `style`. If you pass your own `style`, merge `drag.style` into it.
+Returns the props to spread on the element that is dragged: pointer handlers, `onClickCapture`, `style` and `ref`. If you pass your own `style`, merge `drag.style` into it; if the element has a ref of its own, call both from one callback ref.
 
 | Option | Type | Default | |
 |---|---|---|---|
@@ -80,6 +80,7 @@ Returns the props to spread on the element that is dragged: pointer handlers, `o
 | `rubberBand` | `number` | `0` | How much of the movement past a bound the offset follows, from 0 (it stops) to 1. |
 | `disabled` | `boolean` | `false` | Ignores new drags. |
 | `canStart` | `({ delta, target }) => boolean` | every drag starts | Called once, when a drag picks this axis. `delta` gives its heading, `target` where the pointer went down. Return `false` to leave the gesture to the page. |
+| `wheel` | `boolean` | `false` | Also follows a two-finger trackpad swipe along `axis`. The drag ends once the wheel has been still for 120 ms. |
 | `onStart` | `(state) => void` | | The drag picked this axis. |
 | `onMove` | `(state) => void` | | The pointer moved, including the move that started the drag. |
 | `onEnd` | `(state) => void` | | The pointer lifted. |
@@ -116,6 +117,7 @@ The clamp the hook uses, for settling animations that should stop at the same bo
 
 - **`touch-action`.** The hook sets `pan-y pinch-zoom` for x and `pan-x pinch-zoom` for y. To change it, for example `pan-x pan-down` for a pull to refresh at the top of a list, set it after spreading `drag.style`.
 - **Pointer capture.** Once a drag picks its axis, the element captures the pointer, so the drag carries on when the pointer leaves it.
+- **Trackpads.** A two-finger swipe sends wheel events, not pointer events, so without `wheel` a swipe row on a laptop only opens by clicking and dragging. With `wheel` on, a swipe along `axis` becomes the same drag, with the same callbacks; the hook stops the page from scrolling or swiping back through history while it holds the gesture. A swipe along the other axis, a mouse wheel and a pinch zoom stay with the page. On y, `wheel` takes vertical scrolling over the element, so use it there only when the element should not scroll the page.
 - **Browsers.** Any browser with Pointer Events, which is every current one.
 
 ## Contributing

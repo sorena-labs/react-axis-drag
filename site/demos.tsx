@@ -33,6 +33,7 @@ export function Tape() {
   const drag = useAxisDrag({
     axis: "x",
     direction: "ltr",
+    wheel: true,
     min: -200,
     max: 200,
     rubberBand: 0.3,
@@ -86,6 +87,7 @@ function Row({ title, detail, rtl, onStatus }: { title: string; detail: string; 
   const drag = useAxisDrag({
     axis: "x",
     direction: rtl ? "rtl" : "ltr",
+    wheel: true,
     origin: open ? -ACTIONS : 0,
     min: -ACTIONS,
     max: 0,
@@ -334,6 +336,7 @@ export function Playground() {
   const [rubberBand, setRubberBand] = useState(0.3);
   const [bounded, setBounded] = useState(true);
   const [rtl, setRtl] = useState(false);
+  const [wheel, setWheel] = useState(true);
   const [state, setState] = useState<AxisDragState | null>(null);
   const [offset, setOffset] = useState<number | null>(null);
   const [log, setLog] = useState<string[]>([]);
@@ -344,6 +347,8 @@ export function Playground() {
     threshold,
     rubberBand,
     direction: rtl ? "rtl" : "ltr",
+    // On y, the wheel would take over the page's own scrolling, so the playground offers it on x only.
+    wheel: wheel && axis === "x",
     min: bounded ? -120 : undefined,
     max: bounded ? 120 : undefined,
     onStart: (s) => note(`onStart after ${px(Math.abs(s.delta))} px`),
@@ -368,6 +373,7 @@ export function Playground() {
     `  axis: "${axis}",`,
     `  threshold: ${threshold},`,
     ...(axis === "x" ? [`  direction: "${rtl ? "rtl" : "ltr"}",`] : []),
+    ...(axis === "x" && wheel ? ["  wheel: true,"] : []),
     ...(bounded ? ["  min: -120,", "  max: 120,"] : []),
     `  rubberBand: ${rubberBand},`,
     "  onStart, onMove, onEnd, onCancel,",
@@ -412,6 +418,10 @@ export function Playground() {
         <label className="check">
           <input type="checkbox" checked={bounded} onChange={(e) => setBounded(e.target.checked)} />
           Bounds at {"−"}120 and 120 px
+        </label>
+        <label className="check">
+          <input type="checkbox" checked={wheel} disabled={axis === "y"} onChange={(e) => setWheel(e.target.checked)} />
+          Two-finger trackpad swipes
         </label>
       </form>
 
