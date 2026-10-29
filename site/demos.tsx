@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useAxisDrag, type AxisDragState } from "../src/index";
+import { snap, useAxisDrag, type AxisDragState } from "../src/index";
 
 const px = (n: number) => `${Math.round(n)}`.replace("-", "−");
 
@@ -93,8 +93,7 @@ function Row({ title, detail, rtl, onStatus }: { title: string; detail: string; 
     onMove: (s) => setDragging(s.offset),
     onEnd: (s) => {
       setDragging(null);
-      // A flick decides on its own; a slow drag settles on the nearer side.
-      setOpen(s.velocity < -0.4 || (s.velocity <= 0.4 && s.offset < -ACTIONS / 2));
+      setOpen(snap([-ACTIONS, 0], s) === -ACTIONS);
     },
     onCancel: () => setDragging(null),
   });
@@ -180,13 +179,8 @@ export function Sheet() {
     onMove: (s) => setDragging(s.offset),
     onEnd: (s) => {
       setDragging(null);
-      // Carry the sheet as far as its speed would take it in 160 ms, then pick the nearest height.
-      const aim = s.offset + s.velocity * 160;
-      let best = 0;
-      DETENTS.forEach((d, i) => {
-        if (Math.abs(d.at - aim) < Math.abs(DETENTS[best]!.at - aim)) best = i;
-      });
-      setDetent(best);
+      const to = snap(DETENTS.map((d) => d.at), s);
+      setDetent(DETENTS.findIndex((d) => d.at === to));
     },
     onCancel: () => setDragging(null),
   });

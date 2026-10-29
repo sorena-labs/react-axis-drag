@@ -60,6 +60,15 @@ export function clampOffset(value: number, min = -Infinity, max = Infinity, rubb
   return value;
 }
 
+/**
+ * Where a release settles: the point in `points` nearest to `offset` after it carries on at `velocity` for
+ * `momentum` milliseconds. A flick reaches further than a slow drag. Returns `offset` when there are no points.
+ */
+export function snap(points: readonly number[], { offset, velocity }: Pick<AxisDragState, "offset" | "velocity">, momentum = 160): number {
+  const aim = offset + velocity * momentum;
+  return points.reduce((best, point) => (Math.abs(point - aim) < Math.abs(best - aim) ? point : best), points[0] ?? offset);
+}
+
 // A pointer that rests this long, in milliseconds, before it lifts ends the drag with no velocity.
 const REST = 100;
 
