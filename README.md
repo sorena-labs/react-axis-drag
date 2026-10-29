@@ -134,7 +134,7 @@ The hook never moves anything itself. It reports a number along one axis, and th
 
   ```ts
   useEffect(() => {
-    const el = list.current!;
+    const list = listRef.current!;
     let y = 0;
     let held: boolean | undefined;
     const start = (e: TouchEvent) => {
@@ -143,15 +143,15 @@ The hook never moves anything itself. It reports a number along one axis, and th
       held = undefined;
     };
     const move = (e: TouchEvent) => {
-      held ??= el.scrollTop <= 0 && e.touches[0]!.clientY > y;
+      held ??= list.scrollTop <= 0 && e.touches[0]!.clientY > y;
       // Two fingers are a pinch zoom; leave it to the browser.
       if (held && e.touches.length === 1) e.preventDefault();
     };
-    el.addEventListener("touchstart", start, { passive: true });
-    el.addEventListener("touchmove", move, { passive: false });
+    list.addEventListener("touchstart", start, { passive: true });
+    list.addEventListener("touchmove", move, { passive: false });
     return () => {
-      el.removeEventListener("touchstart", start);
-      el.removeEventListener("touchmove", move);
+      list.removeEventListener("touchstart", start);
+      list.removeEventListener("touchmove", move);
     };
   }, []);
   ```

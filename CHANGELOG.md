@@ -10,7 +10,7 @@ Every release, newest first. Versions follow [semantic versioning](https://semve
 - With `threshold: 0`, a pointer that reports pressure without moving, or that moves exactly diagonally, no longer settles the axis; the drag waits for a move that leans one way.
 - The README says to set `user-select: none` on a dragged element, since a mouse drag across text selects it.
 - The README's swipe row passes `direction`, so the drag and the transform agree in right to left.
-- A pull to refresh, and a sheet whose content scrolls, now work in Safari on iPhone and iPad. The README used to suggest `touch-action: pan-x pan-down`, which Safari drops, so Safari scrolled the list and cancelled the drag. It now shows a touch listener that holds a downward pull at the top of the list back from the browser, tested in Safari on iOS 26.5 and in Chrome. The site's demos use it.
+- A pull to refresh, and a sheet whose content scrolls, now work in Safari on iOS. The README used to suggest `touch-action: pan-x pan-down`, which Safari drops, so Safari scrolled the list and cancelled the drag. It now shows a touch listener that holds a downward pull at the top of the list back from the browser, tested in Safari on iOS 26.5 and in Chrome. The site's demos use it.
 
 ## 0.2.0
 
