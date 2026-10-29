@@ -70,7 +70,7 @@ function Page() {
           </p>
           <CopyInstall />
           <p className="facts">
-            No dependencies. About 1.2 kB minified and gzipped. React 18 and 19. Renders on the server.{" "}
+            No dependencies. About 1.4 kB minified and gzipped. React 18 and 19. Renders on the server.{" "}
             <a href="https://github.com/sorena-labs/react-axis-drag">Source on GitHub</a>, <a href="https://www.npmjs.com/package/react-axis-drag">package on npm</a>.
           </p>
         </div>

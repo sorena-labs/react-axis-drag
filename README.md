@@ -10,7 +10,7 @@ A React hook for pointer drags that lock to one axis. Swipe a row sideways, drag
 - Ends with the pointer's velocity, so you can tell a flick from a slow drag.
 - Swallows the click that ends a drag, so a swipe does not also open what is under it.
 - Keeps native scrolling and pinch zoom on the other axis on touch screens.
-- No dependencies, about 1.2 kB minified and gzipped, React 18 and 19, renders on the server.
+- No dependencies, about 1.4 kB minified and gzipped, React 18 and 19, renders on the server.
 
 ## Install
 

@@ -1,6 +1,6 @@
 {
   "name": "react-axis-drag",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A React hook for pointer drags that lock to one axis, so swipe rows, sheets and pull to refresh keep native scrolling on the other.",
   "keywords": [
     "react",
