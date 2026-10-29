@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { snap, useAxisDrag, type AxisDragState } from "../src/index";
+import { Code } from "./code";
 
 const px = (n: number) => `${Math.round(n)}`.replace("-", "−");
 
@@ -443,7 +444,7 @@ export function Playground() {
           {log.length ? log.map((line, i) => <li key={`${i}${line}`}>{line}</li>) : <li className="muted">Events appear here.</li>}
         </ol>
         <pre>
-          <code>{code}</code>
+          <Code>{code}</Code>
         </pre>
       </div>
     </div>

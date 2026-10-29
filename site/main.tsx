@@ -1,7 +1,9 @@
 /// <reference types="vite/client" />
 import { StrictMode, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
+import { Code } from "./code";
 import { Playground, Pull, Rows, Sheet, Tape } from "./demos";
+import { Knob, Scrub, SlideToConfirm, Spin } from "./ideas";
 import { Spring, VirtualList } from "./integrations";
 import { MARK } from "./mark";
 import "./style.css";
@@ -37,10 +39,41 @@ function Feature({ id, title, children, demo, code }: { id: string; title: strin
       {demo}
       {code && (
         <pre>
-          <code>{code}</code>
+          <Code>{code}</Code>
         </pre>
       )}
     </section>
+  );
+}
+
+/**
+ * A small demo in the grid of ideas. Its code shows in the demo's place, at the demo's size, so opening it never
+ * moves the cards around it.
+ */
+function Idea({ title, note, code, children }: { title: string; note: string; code: string; children: ReactNode }) {
+  const [showCode, setShowCode] = useState(false);
+  return (
+    <article className="idea">
+      <div className="idea-head">
+        <h3>{title}</h3>
+        <div className="segmented" role="group" aria-label={`${title}: show`}>
+          <button type="button" aria-pressed={!showCode} onClick={() => setShowCode(false)}>
+            Demo
+          </button>
+          <button type="button" aria-pressed={showCode} onClick={() => setShowCode(true)}>
+            Code
+          </button>
+        </div>
+      </div>
+      <div className="idea-body">
+        <div data-off={showCode || undefined}>{children}</div>
+        {/* Focusable, so the keyboard can scroll a snippet longer than the demo. */}
+        <pre className="idea-code" data-off={!showCode || undefined} tabIndex={0}>
+          <Code>{code}</Code>
+        </pre>
+      </div>
+      <p className="idea-note">{note}</p>
+    </article>
   );
 }
 
@@ -208,6 +241,87 @@ const rows = useVirtualizer({ count: 10_000, getScrollElement: () => list.curren
             scroll back.
           </p>
         </Feature>
+
+        <section className="feature" aria-labelledby="ideas">
+          <h2 id="ideas">Not only for moving things</h2>
+          <div className="prose">
+            <p>
+              Every demo above moves an element, but the hook never moves anything itself. It reports a number along one axis, and you decide what the
+              number means: a value in a form, the turn of a knob, the side of a box, how close a delete is. Each of these is one hook call.
+            </p>
+          </div>
+          <div className="ideas">
+            <Idea
+              title="Scrub a number"
+              note="Drag a label sideways, as in a design tool. A click on the label still focuses its field, and on a phone the form still scrolls."
+              code={`// One pixel of drag is one unit, so the offset is the value.
+const drag = useAxisDrag({
+  axis: "x",
+  origin: width,
+  min: 24,
+  max: 200,
+  onMove: ({ offset }) => setWidth(Math.round(offset)),
+});
+
+<label>
+  <span {...drag}>Width</span>
+  <input type="number" value={width} onChange={…} />
+</label>`}
+            >
+              <Scrub />
+            </Idea>
+            <Idea
+              title="Turn a knob"
+              note="Drag up or down, or swipe two fingers on a trackpad over it. With the keyboard, the arrow keys turn it."
+              code={`// On y, up is negative, and up turns the knob up.
+const drag = useAxisDrag({
+  axis: "y",
+  wheel: true,
+  origin: -volume,
+  min: -100,
+  max: 0,
+  onMove: ({ offset }) => setVolume(Math.round(-offset)),
+});
+
+<div role="slider" aria-valuenow={volume} {...drag}
+  style={{ ...drag.style, rotate: \`\${volume * 2.7 - 135}deg\` }} />`}
+            >
+              <Knob />
+            </Idea>
+            <Idea
+              title="Spin a box"
+              note="No bounds and no image frames: the offset is the angle in degrees. A flick spins it on, then it settles on a side."
+              code={`const drag = useAxisDrag({
+  axis: "x",
+  wheel: true,
+  origin: angle,
+  onMove: ({ offset }) => setAngle(offset),
+  onEnd: ({ offset, velocity }) =>
+    setAngle(Math.round((offset + velocity * 400) / 90) * 90),
+});
+
+<div style={{ transform: \`rotateY(\${angle}deg)\` }} />`}
+            >
+              <Spin />
+            </Idea>
+            <Idea
+              title="Slide to confirm"
+              note="A tap cannot delete anything; the thumb has to reach the end. The button does the same for the keyboard and screen readers."
+              code={`const drag = useAxisDrag({
+  axis: "x",
+  min: 0,
+  onStart: () => (end = track.clientWidth - 56),
+  onMove: ({ offset }) => setProgress(Math.min(1, offset / end)),
+  onEnd: ({ offset }) => {
+    setProgress(null);
+    if (offset >= end) remove();
+  },
+});`}
+            >
+              <SlideToConfirm />
+            </Idea>
+          </div>
+        </section>
 
         <Feature id="playground" title="Try every option" demo={<Playground />}>
           <p>Change the axis, the threshold, the bounds, the rubber band and the direction, then drag in the square. The readout and the code follow.</p>
