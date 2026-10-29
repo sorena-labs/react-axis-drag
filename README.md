@@ -24,7 +24,7 @@ A row that slides toward the inline start to show actions behind it:
 
 ```tsx
 import { useState, type ReactNode } from "react";
-import { useAxisDrag } from "react-axis-drag";
+import { snap, useAxisDrag } from "react-axis-drag";
 
 const ACTIONS = 160; // the width of the actions behind the row
 
@@ -39,10 +39,10 @@ export function SwipeRow({ children, rtl = false }: { children: ReactNode; rtl?:
     max: 0,
     rubberBand: 0.2,
     onMove: ({ offset }) => setDragging(offset),
-    onEnd: ({ offset, velocity }) => {
+    onEnd: (state) => {
       setDragging(null);
-      // A flick decides on its own; a slow drag settles on the nearer side.
-      setOpen(velocity < -0.5 || (velocity <= 0.5 && offset < -ACTIONS / 2));
+      // A slow drag settles on the nearer side; a flick carries on to the far one.
+      setOpen(snap([-ACTIONS, 0], state) === -ACTIONS);
     },
     onCancel: () => setDragging(null),
   });
@@ -91,6 +91,14 @@ Every callback gets a state:
 | `offset` | `origin + delta`, held between `min` and `max` or eased past them. |
 | `delta` | How far the pointer moved along the axis. On x, positive points toward the inline end. |
 | `velocity` | Pixels per millisecond along the axis, signed like `delta`. 0 if the pointer rested for 100 ms before it lifted. |
+
+### `snap(points, state, momentum?)`
+
+Where a release settles: the point in `points` nearest to where `state.offset` would be after carrying on at `state.velocity` for `momentum` milliseconds (default 160). Pass it the state `onEnd` gets. A slow drag lands on the nearest point; a flick reaches the next one.
+
+```ts
+onEnd: (state) => setHeight(snap([0, 150, 268], state)),
+```
 
 ### `clampOffset(value, min?, max?, rubberBand?)`
 

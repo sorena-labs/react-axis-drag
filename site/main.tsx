@@ -83,9 +83,9 @@ function Page() {
   max: 0,
   rubberBand: 0.25,
   onMove: ({ offset }) => setDragging(offset),
-  onEnd: ({ offset, velocity }) => {
+  onEnd: (state) => {
     setDragging(null);
-    setOpen(velocity < -0.4 || (velocity <= 0.4 && offset < -76));
+    setOpen(snap([-152, 0], state) === -152);
   },
 });`}
         >
@@ -105,13 +105,14 @@ function Page() {
           demo={<Sheet />}
           code={`const drag = useAxisDrag({
   axis: "y",
-  origin: heights[current],
+  origin: height,
   min: 0,
   max: 268,
   rubberBand: 0.2,
-  onEnd: ({ offset, velocity }) => {
-    const aim = offset + velocity * 160;
-    setCurrent(nearest(heights, aim));
+  onMove: ({ offset }) => setDragging(offset),
+  onEnd: (state) => {
+    setDragging(null);
+    setHeight(snap([0, 150, 268], state));
   },
 });`}
         >
@@ -172,7 +173,8 @@ function Page() {
           </div>
           <p className="prose">
             The hook returns pointer handlers, <code>onClickCapture</code> and a <code>style</code> with <code>touch-action</code>. Spread them on the element
-            you drag, and merge <code>drag.style</code> into your own.
+            you drag, and merge <code>drag.style</code> into your own. To settle a release, <code>snap(points, state)</code> picks the nearest point, carrying a
+            flick on by its velocity.
           </p>
         </section>
 

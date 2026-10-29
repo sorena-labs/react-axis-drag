@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { clampOffset, useAxisDrag, type AxisDragOptions } from "./index";
+import { clampOffset, snap, useAxisDrag, type AxisDragOptions } from "./index";
 
 function Box({ dir, children, ...options }: AxisDragOptions & { dir?: "ltr" | "rtl"; children?: ReactNode }) {
   const drag = useAxisDrag(options);
@@ -181,6 +181,27 @@ describe("useAxisDrag", () => {
 
   it("renders on the server", () => {
     expect(renderToString(<Box axis="x" />)).toContain("touch-action:pan-y pinch-zoom");
+  });
+});
+
+describe("snap", () => {
+  const heights = [0, 150, 268];
+
+  it("settles a slow release on the nearest point", () => {
+    expect(snap(heights, { offset: 60, velocity: 0 })).toBe(0);
+    expect(snap(heights, { offset: 90, velocity: 0 })).toBe(150);
+    expect(snap(heights, { offset: 400, velocity: 0 })).toBe(268);
+  });
+
+  it("carries a flick on by its velocity", () => {
+    // 20 px plus 0.5 px/ms for 160 ms aims at 100, nearer 150 than 0.
+    expect(snap(heights, { offset: 20, velocity: 0.5 })).toBe(150);
+    expect(snap(heights, { offset: 200, velocity: -1 })).toBe(0);
+    expect(snap(heights, { offset: 20, velocity: 0.5 }, 0)).toBe(0);
+  });
+
+  it("returns the offset when there is nowhere to snap", () => {
+    expect(snap([], { offset: 42, velocity: 3 })).toBe(42);
   });
 });
 
