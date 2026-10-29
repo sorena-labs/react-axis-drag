@@ -256,6 +256,9 @@ const rows = useVirtualizer({ count: 10_000, getScrollElement: () => list.curren
               The hook sets <code>pan-y pinch-zoom</code> for x and <code>pan-x pinch-zoom</code> for y, so people can still zoom.
             </li>
             <li>Once a drag picks its axis the element captures the pointer, so the drag carries on outside it.</li>
+            <li>
+              A mouse drag across text selects it. Set <code>user-select: none</code> on the element you drag, as every demo here does.
+            </li>
           </ul>
         </section>
       </main>

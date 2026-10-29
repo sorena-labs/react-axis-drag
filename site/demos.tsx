@@ -274,7 +274,9 @@ export function Pull() {
   function refresh() {
     setBusy(true);
     setTimeout(() => {
-      setItems((list) => [`Build ${next.current++} passed`, ...list]);
+      // Counted outside the updater: StrictMode runs updaters twice, which would skip a number each time.
+      const build = next.current++;
+      setItems((list) => [`Build ${build} passed`, ...list]);
       setBusy(false);
     }, 900);
   }
