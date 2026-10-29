@@ -1,0 +1,196 @@
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
+import { renderToString } from "react-dom/server";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { clampOffset, useAxisDrag, type AxisDragOptions } from "./index";
+
+function Box({ dir, children, ...options }: AxisDragOptions & { dir?: "ltr" | "rtl"; children?: ReactNode }) {
+  const drag = useAxisDrag(options);
+  return (
+    <div data-testid="box" {...drag} style={{ ...drag.style, direction: dir }}>
+      {children}
+    </div>
+  );
+}
+
+const box = () => screen.getByTestId("box");
+const point = (x: number, y: number, more: object = {}) => ({ pointerId: 1, pointerType: "touch", button: 0, clientX: x, clientY: y, ...more });
+const down = (x: number, y: number, more?: object) => fireEvent.pointerDown(box(), point(x, y, more));
+const move = (x: number, y: number, more?: object) => fireEvent.pointerMove(box(), point(x, y, more));
+const up = (x: number, y: number) => fireEvent.pointerUp(box(), point(x, y));
+
+let now = 0;
+beforeEach(() => {
+  now = 0;
+  vi.spyOn(performance, "now").mockImplementation(() => now);
+});
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
+
+describe("useAxisDrag", () => {
+  it("waits for the threshold, then follows the pointer along its axis", () => {
+    const onStart = vi.fn();
+    const onMove = vi.fn();
+    render(<Box axis="x" onStart={onStart} onMove={onMove} />);
+    down(0, 0);
+    move(5, 1);
+    expect(onMove).not.toHaveBeenCalled();
+    move(20, 2);
+    expect(onStart).toHaveBeenCalledOnce();
+    expect(onMove).toHaveBeenLastCalledWith(expect.objectContaining({ delta: 20, offset: 20 }));
+    move(32, 9);
+    expect(onMove).toHaveBeenLastCalledWith(expect.objectContaining({ delta: 32, offset: 32 }));
+  });
+
+  it("follows y as well", () => {
+    const onMove = vi.fn();
+    render(<Box axis="y" onMove={onMove} />);
+    down(0, 0);
+    move(2, 30);
+    expect(onMove).toHaveBeenLastCalledWith(expect.objectContaining({ delta: 30 }));
+  });
+
+  it("lets go when the gesture runs along the other axis, so the page scrolls", () => {
+    const onStart = vi.fn();
+    const onMove = vi.fn();
+    render(<Box axis="x" onStart={onStart} onMove={onMove} />);
+    down(0, 0);
+    move(3, 20);
+    move(60, 20);
+    expect(onStart).not.toHaveBeenCalled();
+    expect(onMove).not.toHaveBeenCalled();
+  });
+
+  it("captures the pointer once the drag locks", () => {
+    const capture = vi.fn();
+    Element.prototype.setPointerCapture = capture;
+    render(<Box axis="x" />);
+    down(0, 0);
+    move(4, 0);
+    expect(capture).not.toHaveBeenCalled();
+    move(12, 0);
+    expect(capture).toHaveBeenCalledWith(1);
+  });
+
+  it("mirrors x in right to left, so positive points to the inline end", () => {
+    const onMove = vi.fn();
+    render(<Box axis="x" direction="rtl" onMove={onMove} />);
+    down(100, 0);
+    move(70, 0);
+    expect(onMove).toHaveBeenLastCalledWith(expect.objectContaining({ delta: 30 }));
+  });
+
+  it("reads the direction from the element when it is not given", () => {
+    const onMove = vi.fn();
+    render(<Box axis="x" dir="rtl" onMove={onMove} />);
+    down(100, 0);
+    move(70, 0);
+    expect(onMove).toHaveBeenLastCalledWith(expect.objectContaining({ delta: 30 }));
+  });
+
+  it("starts from the origin and holds the offset at the bounds", () => {
+    const onMove = vi.fn();
+    render(<Box axis="x" origin={50} min={0} max={60} onMove={onMove} />);
+    down(0, 0);
+    move(40, 0);
+    expect(onMove).toHaveBeenLastCalledWith(expect.objectContaining({ delta: 40, offset: 60 }));
+    move(-80, 0);
+    expect(onMove).toHaveBeenLastCalledWith(expect.objectContaining({ delta: -80, offset: 0 }));
+  });
+
+  it("eases past the bounds with a rubber band", () => {
+    const onMove = vi.fn();
+    render(<Box axis="x" max={60} rubberBand={0.5} onMove={onMove} />);
+    down(0, 0);
+    move(100, 0);
+    expect(onMove).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 80 }));
+  });
+
+  it("ends with the speed of the last move, or none after a rest", () => {
+    const onEnd = vi.fn();
+    render(<Box axis="x" onEnd={onEnd} />);
+    down(0, 0);
+    now = 10;
+    move(20, 0);
+    now = 20;
+    move(40, 0);
+    now = 30;
+    up(40, 0);
+    expect(onEnd).toHaveBeenLastCalledWith({ delta: 40, offset: 40, velocity: 2 });
+
+    down(0, 0);
+    now = 40;
+    move(30, 0);
+    now = 400;
+    up(30, 0);
+    expect(onEnd).toHaveBeenLastCalledWith(expect.objectContaining({ delta: 30, velocity: 0 }));
+  });
+
+  it("swallows the click that ends a drag, and only that one", () => {
+    const onClick = vi.fn();
+    render(
+      <Box axis="x">
+        <button onClick={onClick}>Open</button>
+      </Box>,
+    );
+    fireEvent.click(screen.getByRole("button"));
+    expect(onClick).toHaveBeenCalledTimes(1);
+    down(0, 0);
+    move(30, 0);
+    up(30, 0);
+    fireEvent.click(screen.getByRole("button"));
+    expect(onClick).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("button"));
+    expect(onClick).toHaveBeenCalledTimes(2);
+  });
+
+  it("reports a drag the browser cancels", () => {
+    const onEnd = vi.fn();
+    const onCancel = vi.fn();
+    render(<Box axis="x" onEnd={onEnd} onCancel={onCancel} />);
+    down(0, 0);
+    move(30, 0);
+    fireEvent.pointerCancel(box(), point(30, 0));
+    up(30, 0);
+    expect(onCancel).toHaveBeenCalledOnce();
+    expect(onEnd).not.toHaveBeenCalled();
+  });
+
+  it("ignores other mouse buttons, other pointers and a disabled drag", () => {
+    const onStart = vi.fn();
+    const { rerender } = render(<Box axis="x" onStart={onStart} />);
+    down(0, 0, { pointerType: "mouse", button: 2 });
+    move(30, 0, { pointerType: "mouse" });
+    down(0, 0);
+    move(30, 0, { pointerId: 2 });
+    up(30, 0);
+    rerender(<Box axis="x" disabled onStart={onStart} />);
+    down(0, 0);
+    move(30, 0);
+    expect(onStart).not.toHaveBeenCalled();
+  });
+
+  it("keeps native scrolling and zoom on the other axis", () => {
+    const { rerender } = render(<Box axis="x" />);
+    expect(box().style.touchAction).toBe("pan-y pinch-zoom");
+    rerender(<Box axis="y" />);
+    expect(box().style.touchAction).toBe("pan-x pinch-zoom");
+  });
+
+  it("renders on the server", () => {
+    expect(renderToString(<Box axis="x" />)).toContain("touch-action:pan-y pinch-zoom");
+  });
+});
+
+describe("clampOffset", () => {
+  it("holds a value between the bounds, or eases past them", () => {
+    expect(clampOffset(5, 0, 10)).toBe(5);
+    expect(clampOffset(15, 0, 10)).toBe(10);
+    expect(clampOffset(-5, 0, 10)).toBe(0);
+    expect(clampOffset(20, 0, 10, 0.25)).toBe(12.5);
+    expect(clampOffset(-20, 0, 10, 1)).toBe(-20);
+    expect(clampOffset(1000)).toBe(1000);
+  });
+});

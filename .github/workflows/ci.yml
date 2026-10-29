@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [22, 24]
+        react: [18, 19]
+    name: Node ${{ matrix.node }}, React ${{ matrix.react }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - if: matrix.react == 18
+        run: npm install --no-save react@18 react-dom@18 @types/react@18 @types/react-dom@18
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
