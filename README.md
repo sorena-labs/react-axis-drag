@@ -126,6 +126,7 @@ The hook never moves anything itself. It reports a number along one axis, and th
 
 - **`touch-action`.** The hook sets `pan-y pinch-zoom` for x and `pan-x pinch-zoom` for y. To change it, for example `pan-x pan-down` for a pull to refresh at the top of a list, set it after spreading `drag.style`.
 - **Pointer capture.** Once a drag picks its axis, the element captures the pointer, so the drag carries on when the pointer leaves it.
+- **Text selection.** A mouse drag across text selects it, as it would anywhere on the page. Unless people need to select the element's text, set `user-select: none` on it, with `-webkit-user-select: none` beside it for Safari, as the demos do.
 - **Trackpads.** A two-finger swipe sends wheel events, not pointer events, so without `wheel` a swipe row on a laptop only opens by clicking and dragging. With `wheel` on, a swipe along `axis` becomes the same drag, with the same callbacks; the hook stops the page from scrolling or swiping back through history while it holds the gesture. A swipe along the other axis, a mouse wheel and a pinch zoom stay with the page. On y, `wheel` takes vertical scrolling over the element, so use it there only when the element should not scroll the page.
 - **Browsers.** Any browser with Pointer Events, which is every current one.
 
