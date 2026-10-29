@@ -16,7 +16,10 @@ npm ci
 npm test            # Vitest with Testing Library in jsdom
 npm run typecheck
 npm run build       # TypeScript into dist/
+npm run site        # the demo site at http://localhost:5173/react-axis-drag/
 ```
+
+The demo site in `site/` uses the hook's source directly, so a change shows there at once. It deploys to GitHub Pages from `main`.
 
 A pull request:
 

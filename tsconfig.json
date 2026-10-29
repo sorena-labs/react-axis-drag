@@ -13,5 +13,5 @@
     "declaration": true,
     "outDir": "dist"
   },
-  "include": ["src", "vitest.config.ts"]
+  "include": ["src", "site", "vitest.config.ts"]
 }

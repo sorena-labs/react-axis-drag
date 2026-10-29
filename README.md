@@ -2,6 +2,8 @@
 
 A React hook for pointer drags that lock to one axis. Swipe a row sideways, drag a sheet down, pull a list to refresh: the drag follows one axis and leaves the other to the browser, so the page still scrolls.
 
+**[Try every feature live](https://sorena-labs.github.io/react-axis-drag/)**
+
 - Waits a few pixels, then picks the axis the pointer moves along most. If that is not yours, it lets go.
 - Mirrors x in right-to-left layouts, so a positive value always points toward the inline end.
 - Holds the offset between bounds, or eases past them with a rubber band.
