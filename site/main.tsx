@@ -238,7 +238,8 @@ const rows = useVirtualizer({ count: 10_000, getScrollElement: () => list.curren
             </table>
           </div>
           <p className="prose">
-            The hook returns pointer handlers, <code>onClickCapture</code> and a <code>style</code> with <code>touch-action</code>. Spread them on the element
+            The hook returns pointer handlers, <code>onClickCapture</code>, <code>onDragStartCapture</code> and a <code>style</code> with{" "}
+            <code>touch-action</code>. Spread them on the element
             you drag, and merge <code>drag.style</code> into your own. To settle a release, <code>snap(points, state)</code> picks the nearest point, carrying a
             flick on by its velocity.
           </p>

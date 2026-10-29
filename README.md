@@ -68,7 +68,7 @@ export function SwipeRow({ children, rtl = false }: { children: ReactNode; rtl?:
 
 ### `useAxisDrag(options)`
 
-Returns the props to spread on the element that is dragged: pointer handlers, `onClickCapture`, `style` and `ref`. If you pass your own `style`, merge `drag.style` into it; if the element has a ref of its own, call both from one callback ref.
+Returns the props to spread on the element that is dragged: pointer handlers, `onClickCapture`, `onDragStartCapture`, `style` and `ref`. If you pass your own `style`, merge `drag.style` into it; if the element has a ref of its own, call both from one callback ref.
 
 | Option | Type | Default | |
 |---|---|---|---|
