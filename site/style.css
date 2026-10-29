@@ -670,6 +670,93 @@ ul.prose li {
   }
 }
 
+/* With Motion: a card that settles on a spring */
+.spring-track {
+  height: 140px;
+}
+
+.stop {
+  position: absolute;
+  top: calc(50% + 6px);
+  width: 2px;
+  height: 96px;
+  translate: -1px -50%;
+  background: var(--line);
+}
+
+.spring-card {
+  position: absolute;
+  top: calc(50% + 6px - 36px);
+  left: calc(50% - 52px);
+  width: 104px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--tape);
+  color: var(--tape-ink);
+  box-shadow: var(--shadow);
+  font-weight: 700;
+  font-stretch: 112%;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.spring-track + .segmented {
+  margin-top: 16px;
+}
+
+/* With TanStack Virtual: ten thousand swipe rows */
+.vlist {
+  height: 336px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.vrow {
+  overflow: hidden;
+  border-bottom: 1px solid var(--line);
+}
+
+.vrow-action {
+  position: absolute;
+  inset-block: 1px;
+  inset-inline-end: 0;
+  width: 96px;
+  border: 0;
+  background: var(--ink);
+  color: var(--paper);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.vrow-action:focus-visible {
+  outline-color: currentColor;
+  outline-offset: -5px;
+}
+
+.vrow-face {
+  position: relative;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-inline: 16px 0;
+  background: var(--surface);
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 220ms var(--ease);
+}
+
+.vrow-face[data-dragging] {
+  transition: none;
+}
+
 /* Playground */
 .playground {
   display: grid;

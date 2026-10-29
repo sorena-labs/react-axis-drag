@@ -2,6 +2,7 @@
 import { StrictMode, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { Playground, Pull, Rows, Sheet, Tape } from "./demos";
+import { Spring, VirtualList } from "./integrations";
 import { MARK } from "./mark";
 import "./style.css";
 
@@ -155,6 +156,56 @@ function Page() {
             The pull only starts downward at the top of the list: <code>canStart</code> checks both. On touch screens the list also sets its own{" "}
             <code>touch-action</code> after the hook's, so at the top an upward swipe still scrolls natively. Past 64 px the pull gets heavier instead of
             stopping.
+          </p>
+        </Feature>
+
+        <Feature
+          id="spring"
+          title="Hand the release to a spring"
+          demo={<Spring />}
+          code={`import { animate, motion, useMotionValue } from "motion/react";
+
+const x = useMotionValue(0);
+const drag = useAxisDrag({
+  axis: "x",
+  onStart: () => (base = x.get()),
+  onMove: ({ delta }) => x.set(clampOffset(base + delta, -150, 150, 0.3)),
+  onEnd: ({ velocity }) => {
+    const to = snap([-100, 0, 100], { offset: x.get(), velocity });
+    // Motion wants pixels per second; the hook gives pixels per millisecond.
+    animate(x, to, { type: "spring", velocity: velocity * 1000, bounce: 0.15 });
+  },
+});
+
+<motion.div {...drag} style={{ ...drag.style, x }} />`}
+        >
+          <p>
+            The hook only reads the pointer; it never animates. Here Motion does the settling: on release the card's spring starts at the pointer's own
+            speed, so a flick carries on and a slow drag eases in. Catch the card while it is still moving and it stops where it is.
+          </p>
+          <p>The same handoff works with React Spring, the Web Animations API or a CSS transition. Bring whichever you already use.</p>
+        </Feature>
+
+        <Feature
+          id="virtual"
+          title="Swipe rows in a list of ten thousand"
+          demo={<VirtualList />}
+          code={`import { useVirtualizer } from "@tanstack/react-virtual";
+
+const rows = useVirtualizer({ count: 10_000, getScrollElement: () => list.current, estimateSize: () => 56 });
+
+{rows.getVirtualItems().map((item) => (
+  <SwipeRow
+    key={item.key}
+    open={open === item.index}
+    onOpenChange={(next) => setOpen(next ? item.index : null)}
+  />
+))}`}
+        >
+          <p>
+            TanStack Virtual mounts only the rows on screen, and each of those runs its own <code>useAxisDrag</code>. The hook keeps no state outside the
+            drag in progress, so rows come and go as you scroll and nothing piles up. Which row is open lives in the list, so it is still open when you
+            scroll back.
           </p>
         </Feature>
 
