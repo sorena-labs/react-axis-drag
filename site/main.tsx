@@ -165,7 +165,8 @@ function Page() {
           </p>
           <p>
             Open it to full height and the route scrolls. Pull the route down once it is at its top and the sheet follows: <code>canStart</code> sees which
-            way the drag is heading and where it began, and leaves every other gesture to the list.
+            way the drag is heading and where it began, and leaves every other gesture to the list. On touch screens the route keeps that pull from the
+            browser with the same touch listener as the pull to refresh below.
           </p>
         </Feature>
 
@@ -183,12 +184,25 @@ function Page() {
   onEnd: ({ offset }) => offset >= 64 && refresh(),
 });
 
-<div {...drag} style={{ ...drag.style, touchAction: atTop ? "pan-x pan-down" : "pan-y" }} />`}
+// Safari ignores touch-action: pan-down, so a touch listener keeps the pull from the browser.
+let y = 0, held;
+list.addEventListener("touchstart", (e) => {
+  if (e.touches.length > 1) return;
+  y = e.touches[0].clientY;
+  held = undefined;
+});
+list.addEventListener("touchmove", (e) => {
+  held ??= list.scrollTop <= 0 && e.touches[0].clientY > y;
+  if (held && e.touches.length === 1) e.preventDefault();
+}, { passive: false });
+
+<div {...drag} style={{ ...drag.style, touchAction: "pan-y pinch-zoom" }} />`}
         >
           <p>
-            The pull only starts downward at the top of the list: <code>canStart</code> checks both. On touch screens the list also sets its own{" "}
-            <code>touch-action</code> after the hook's, so at the top an upward swipe still scrolls natively. Past 64 px the pull gets heavier instead of
-            stopping.
+            The pull only starts downward at the top of the list: <code>canStart</code> checks both. On touch screens the list sets its own{" "}
+            <code>touch-action</code> after the hook's, so it scrolls and zooms natively, and a touch listener keeps a pull that starts downward at its top
+            from the browser, so it reaches the drag. <code>pan-x pan-down</code> would say that in CSS, but Safari ignores <code>pan-down</code>. Past 64
+            px the pull gets heavier instead of stopping.
           </p>
         </Feature>
 
@@ -352,10 +366,10 @@ const drag = useAxisDrag({
             </table>
           </div>
           <p className="prose">
-            The hook returns pointer handlers, <code>onClickCapture</code>, <code>onDragStartCapture</code> and a <code>style</code> with{" "}
-            <code>touch-action</code>. Spread them on the element
-            you drag, and merge <code>drag.style</code> into your own. To settle a release, <code>snap(points, state)</code> picks the nearest point, carrying a
-            flick on by its velocity.
+            The hook returns pointer handlers, <code>onClickCapture</code>, <code>onDragStartCapture</code>, a <code>style</code> with{" "}
+            <code>touch-action</code> and a <code>ref</code>, which <code>wheel</code> needs. Spread them on the element you drag, merge{" "}
+            <code>drag.style</code> into your own, and if the element has a ref of its own, call both from one callback ref. To settle a release,{" "}
+            <code>snap(points, state)</code> picks the nearest point, carrying a flick on by its velocity.
           </p>
         </section>
 

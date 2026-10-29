@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { snap, useAxisDrag, type AxisDragState } from "../src/index";
 import { Code } from "./code";
 
@@ -162,6 +162,36 @@ export function Rows() {
   );
 }
 
+/**
+ * Keeps a downward pull at the top of `list` from the browser, so it reaches the drag instead of scrolling the list.
+ * `touch-action: pan-x pan-down` would say this, but Safari ignores `pan-down`. Like the browser, it decides on a
+ * touch's first move, and leaves pinch zoom alone.
+ */
+function useHoldPullAtTop(list: RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    const el = list.current;
+    if (!el) return;
+    let y = 0;
+    let held: boolean | undefined;
+    const start = (e: TouchEvent) => {
+      if (e.touches.length > 1) return;
+      y = e.touches[0]!.clientY;
+      held = undefined;
+    };
+    const move = (e: TouchEvent) => {
+      held ??= el.scrollTop <= 0 && e.touches[0]!.clientY > y;
+      if (held && e.touches.length === 1) e.preventDefault();
+    };
+    el.addEventListener("touchstart", start, { passive: true });
+    // Not passive, or Safari scrolls without waiting for it.
+    el.addEventListener("touchmove", move, { passive: false });
+    return () => {
+      el.removeEventListener("touchstart", start);
+      el.removeEventListener("touchmove", move);
+    };
+  }, [list]);
+}
+
 const DETENTS = [
   { name: "Full", at: 0 },
   { name: "Half", at: 150 },
@@ -185,16 +215,14 @@ const WAYPOINTS = [
 export function Sheet() {
   const [detent, setDetent] = useState(2);
   const [dragging, setDragging] = useState<number | null>(null);
-  const [scrolled, setScrolled] = useState(false);
   const route = useRef<HTMLDivElement>(null);
   const at = DETENTS[detent]!.at;
   const full = detent === 0;
+  useHoldPullAtTop(route);
 
   // Below full height the route does not scroll, so it starts at its top again.
   useEffect(() => {
-    if (full || !route.current) return;
-    route.current.scrollTop = 0;
-    setScrolled(false);
+    if (!full && route.current) route.current.scrollTop = 0;
   }, [full]);
 
   const drag = useAxisDrag({
@@ -238,9 +266,8 @@ export function Sheet() {
             ref={route}
             className="sheet-route"
             data-full={full || undefined}
-            onScroll={(e) => setScrolled(e.currentTarget.scrollTop > 0)}
-            // Scrolled, the route scrolls both ways; at its top a downward pull goes to the sheet.
-            style={full ? { touchAction: scrolled ? "pan-y" : "pan-x pan-down" } : undefined}
+            // At full height the route scrolls; useHoldPullAtTop hands a downward pull at its top to the sheet.
+            style={full ? { touchAction: "pan-y pinch-zoom" } : undefined}
           >
             <ol>
               {WAYPOINTS.map((point) => (
@@ -266,11 +293,11 @@ const PULL = 64;
 /** Pull the list down at its top to refresh. Everywhere else the list scrolls as usual. */
 export function Pull() {
   const [items, setItems] = useState(["Build 412 passed", "Deploy to staging finished", "Nightly backup done", "Build 411 passed", "Certificate renewed", "Build 410 passed", "Cache cleared", "Build 409 failed, then passed on retry"]);
-  const [atTop, setAtTop] = useState(true);
   const [pull, setPull] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const next = useRef(413);
   const list = useRef<HTMLDivElement | null>(null);
+  useHoldPullAtTop(list);
 
   function refresh() {
     setBusy(true);
@@ -307,15 +334,14 @@ export function Pull() {
         </div>
         <div
           className="pull-scroll"
-          onScroll={(e) => setAtTop(e.currentTarget.scrollTop <= 0)}
           {...drag}
           // The list's own ref and the hook's, from one callback: the hook's alone would replace it.
           ref={(element) => {
             list.current = element;
             drag.ref(element);
           }}
-          // At the top a downward pull is ours and an upward one still scrolls; further down, the list only scrolls.
-          style={{ ...drag.style, touchAction: atTop ? "pan-x pan-down" : "pan-y" }}
+          // The list scrolls; useHoldPullAtTop keeps a downward pull at its top for the drag.
+          style={{ ...drag.style, touchAction: "pan-y pinch-zoom" }}
         >
           <ul className="pull-list" data-dragging={pull !== null || undefined} style={{ transform: `translateY(${y}px)` }}>
             {items.map((item) => (
