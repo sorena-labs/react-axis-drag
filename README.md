@@ -124,15 +124,41 @@ The hook never moves anything itself. It reports a number along one axis, and th
 ## Good to know
 
 - **Keyboard and screen readers.** A drag only works with a pointer. Give everything a drag can reach a real button too, such as a "More" button that opens the same row actions. WCAG 2.2 asks for this in 2.5.7, Dragging Movements.
-- **Scrolling content.** A sheet whose content scrolls, or a pull to refresh, should only take over at the top of the list and only when pulled down. Check both in `canStart`, and on touch screens set the list's `touch-action` to `pan-x pan-down` at its top and `pan-y` below it, so the browser keeps the other gestures:
+- **Scrolling content.** A sheet whose content scrolls, or a pull to refresh, should only take over at the top of the list and only when pulled down. Check both in `canStart`:
 
   ```ts
   canStart: ({ delta, target }) => !list.contains(target as Node) || (list.scrollTop <= 0 && delta > 0),
   ```
 
-  Safari, on iPhone and iPad as on the Mac, does not support `pan-up` or `pan-down`. It drops `pan-x pan-down` and keeps vertical panning, so there a pull down at the top of the list goes to the browser, not to the drag.
+  On touch screens the browser must also leave that pull alone. Otherwise it scrolls the list, takes the pointer, and the drag gets `onCancel`. `touch-action: pan-x pan-down` would say so, but Safari does not support `pan-down` and drops the whole value. Instead, give the list `touch-action: pan-y pinch-zoom` after spreading `drag.style`, so it scrolls and zooms, and hold the pull back from the browser in a touch listener. Like the browser, the listener decides on a touch's first move. A move down at the top goes to the drag, and anything else scrolls the list. The listener must not be passive, or Safari scrolls without waiting for it.
 
-- **`touch-action`.** The hook sets `pan-y pinch-zoom` for x and `pan-x pinch-zoom` for y. To change it, for example `pan-x pan-down` for a pull to refresh at the top of a list, set it after spreading `drag.style`.
+  ```ts
+  useEffect(() => {
+    const list = listRef.current!;
+    let y = 0;
+    let held: boolean | undefined;
+    const start = (e: TouchEvent) => {
+      if (e.touches.length > 1) return;
+      y = e.touches[0]!.clientY;
+      held = undefined;
+    };
+    const move = (e: TouchEvent) => {
+      held ??= list.scrollTop <= 0 && e.touches[0]!.clientY > y;
+      // Two fingers are a pinch zoom; leave it to the browser.
+      if (held && e.touches.length === 1) e.preventDefault();
+    };
+    list.addEventListener("touchstart", start, { passive: true });
+    list.addEventListener("touchmove", move, { passive: false });
+    return () => {
+      list.removeEventListener("touchstart", start);
+      list.removeEventListener("touchmove", move);
+    };
+  }, []);
+  ```
+
+  This is what the site's sheet and pull to refresh do. It was tested in Safari on iOS 26.5 in the iOS Simulator, and in Chrome 156 with touch input. A pull down at the top moves the sheet or refreshes the list, and a pull that turns back up stays with the drag. A swipe up at the top, and any swipe further down, scrolls the list. Two fingers still zoom the page.
+
+- **`touch-action`.** The hook sets `pan-y pinch-zoom` for x and `pan-x pinch-zoom` for y. To change it, for example to `pan-y pinch-zoom` on a list that scrolls and also pulls to refresh, set it after spreading `drag.style`.
 - **Pointer capture.** Once a drag picks its axis, the element captures the pointer, so the drag carries on when the pointer leaves it.
 - **Other buttons and fingers.** Only the primary mouse button starts a drag. A second finger that lands during a drag is ignored; the first finger keeps the drag and ends it.
 - **Text selection.** A mouse drag across text selects it, as it would anywhere on the page. Unless people need to select the element's text, set `user-select: none` on it, with `-webkit-user-select: none` beside it for Safari, as the demos do.
