@@ -1,0 +1,33 @@
+name: Release
+
+# Every pushed version tag gets a GitHub release, with that version's lines from CHANGELOG.md as its notes.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Write the notes from the changelog
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v heading="## $version" '$0 == heading { on = 1; next } /^## / { on = 0 } on' CHANGELOG.md | sed '/./,$!d' > notes.md
+          if [ ! -s notes.md ]; then
+            echo "CHANGELOG.md has no lines under \"## $version\"." >&2
+            exit 1
+          fi
+          {
+            echo
+            echo "Install: \`npm install react-axis-drag@$version\`"
+            echo
+            echo "Try every feature: https://sorena-labs.github.io/react-axis-drag/"
+          } >> notes.md
+      - name: Publish the release
+        run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md --verify-tag
+        env:
+          GH_TOKEN: ${{ github.token }}
